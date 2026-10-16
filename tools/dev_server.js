@@ -18,8 +18,8 @@ const gemLog = [];
 const hoy = new Date().toISOString().slice(0, 10);
 
 function categoriasDe(prompt) {
-  const m = prompt.match(/copia el texto tal cual\):\n([\s\S]*?)\n- Si dudas/);
-  return m ? m[1].split('\n').map((l) => l.replace(/^\d+\.\s*/, '')) : [];
+  const m = prompt.match(/CATEGORÍAS:\n([\s\S]*?)\n(?:COSTUMBRES|El texto)/);          // formato nuevo: "3 Coche (…) — ej: …"
+  return m ? m[1].split('\n').map((l) => l.replace(/^\d+\s*/, '').replace(/\s+—\s+ej:.*$/, '')) : [];
 }
 
 function respuestaGemini(cats) {
@@ -28,9 +28,9 @@ function respuestaGemini(cats) {
     ['Queso curado', 8.9, 'Supermercado'], ['Leche entera x6', 6.6, 'Supermercado'], ['Pan de molde', 1.85, 'Supermercado'],
     ['Pechuga de pollo', 9.15, 'Supermercado'], ['Fruta variada', 12.0, 'Supermercado'], ['Detergente', 70.0, 'Supermercado'],
     ['Figurita coleccionable', 20.0, 'Decoración'], ['Lámpara de mesa', 15.0, 'Decoración'], ['Tarjeta regalo', 25.0, 'Regalos'],
-  ].map(([n, p, c]) => ({ nombre_articulo: n, precio: p, categoria_sugerida: pick(c) }));
+  ].map(([n, p, c]) => ({ n, p, c: String(cats.indexOf(pick(c)) + 1) }));
   // suma 168,50 y el total impreso es 170,00 -> la app debe crear una línea de ajuste de 1,50
-  return { fecha: hoy, comercio: 'Supermercado de prueba', importe_total: 170.0, lineas };
+  return { f: hoy, s: 'Supermercado de prueba', t: 170.0, l: lineas };
 }
 
 const server = http.createServer((req, res) => {

@@ -27,7 +27,8 @@
     '🛡️ Colchón / ahorro', '🕹️ Hobbys y videojuegos', '🖥️ Decoración, periféricos y gaming', '📑 Multas',
     '🧾 Trámites', '🗂️ Gestoría', '📦 Otros'];
 
-  const cats = () => (data.config.categorias || []).map((c) => (typeof c === 'string' ? c : c.nombre));
+  data.config = C.normConfig(data.config);                                    // también lo guardado de otras sesiones
+  const cats = () => (Array.isArray(data.config.categorias) ? data.config.categorias : []).map((c) => (typeof c === 'string' ? c : c.nombre));
   const persistData = () => save(LS.data, data);
   const persistQueue = () => save(LS.queue, queue);
   const rebuildIndex = () => { index = C.buildIndex(data.diccionario); };
@@ -98,10 +99,23 @@
       if (!force && meta.rev === data.rev) { ui.net = 'idle'; return true; }
       const d = await apiGet({ action: 'data' });
       if (!d.ok) { ui.net = 'offline'; return false; }
-      data = { rev: d.rev, config: Object.assign({ categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, d.config), diccionario: d.diccionario || [], gastos: d.gastos || [], extras: d.extras || [] };
+      data = { rev: d.rev, config: C.normConfig(Object.assign({ categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, d.config)), diccionario: d.diccionario || [], gastos: d.gastos || [], extras: d.extras || [] };
       overlayQueue(); rebuildIndex(); persistData(); ui.net = 'idle';
       return true;
     } catch (e) { ui.net = 'offline'; return false; } finally { refreshing = false; setNet(); renderAll(); }
+  }
+
+  /** Qué responde tu hoja (para entender por qué algo no aparece). */
+  async function diagnose() {
+    const out = { conectada: configured(), local: { categorias: cats().length, gastos: data.gastos.length, pendientes: queue.length, rev: data.rev } };
+    if (!configured()) return out;
+    try { const p = await apiGet({ action: 'ping' }); out.ping = { ok: !!p.ok, version: p.v, modo: p.mode, app: p.app, error: p.error }; } catch (e) { out.ping = { error: String(e.message || e) }; }
+    try {
+      const d = await apiGet({ action: 'data' });
+      if (d.ok) { const k = (d.config || {}).categorias; out.servidor = { categorias: Array.isArray(k) ? k.length : (k == null ? 'no existe' : 'formato raro (' + typeof k + ')'), claves: Object.keys(d.config || {}), gastos: (d.gastos || []).length, extras: (d.extras || []).length }; }
+      else out.servidor = { error: d.error || d.code || 'sin respuesta' };
+    } catch (e) { out.servidor = { error: String(e.message || e) }; }
+    return out;
   }
 
   function setNet() {
@@ -769,7 +783,7 @@
     if (new URLSearchParams(location.search).get('cam') === '1') setTimeout(() => $('#camIn').click(), 300);
     Object.assign(FF, { get data() { return data; }, get cfg() { return cfg; }, get index() { return index; }, ui, enqueue, addGastos, addExtraRow, delExtra, delGasto,
       learn, persist: persistData, openSheet, pickCategory, scan: scanFile, toast, esc, cats, openDetail, goMobile, renderAll, refresh, flush, rebuildIndex, loadDefaultCats,
-      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig,  loadXLSX: () => loadXLSX(), get queue() { return queue; } });
+      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, diagnose,  loadXLSX: () => loadXLSX(), get queue() { return queue; } });
     window.__ff = { get data() { return data; }, get queue() { return queue; }, get cfg() { return cfg; }, ui, refresh, flush, go, renderAll, scan: scanFile, save: saveCfg };
   }
   init();

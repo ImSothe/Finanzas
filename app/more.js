@@ -167,11 +167,34 @@
     };
   }
 
+  async function runDiagnose() {
+    const sh = FF.openSheet('<h3>🩺 Diagnóstico</h3><div class="center" style="padding:18px 0"><div class="spinner"></div>Preguntando a tu hoja…</div>');
+    const d = await FF.diagnose();
+    const li = [];
+    li.push(`En este dispositivo: <b>${d.local.categorias}</b> categorías, <b>${d.local.gastos}</b> gastos, <b>${d.local.pendientes}</b> cambios pendientes de enviar.`);
+    let consejo = '';
+    if (!d.conectada) { li.push('Hoja de Google: <b>no conectada</b> (la app funciona solo en este dispositivo).'); if (!d.local.categorias) consejo = 'Pulsa “Cargar las categorías de ejemplo” en el aviso de arriba o importa tu Excel.'; }
+    else {
+      const p = d.ping || {};
+      li.push(p.ok ? `Tu script responde (versión ${esc(p.version || '?')}, modo ${esc(p.modo || 'hoja')}).` : `Tu script <b>no responde bien</b>: ${esc(p.error || 'sin respuesta')}. Revisa la URL y el token en Ajustes, y que el despliegue sea “cualquier persona”.`);
+      const s = d.servidor || {};
+      if (s.error) li.push(`Datos de la hoja: <b>error</b> — ${esc(s.error)}`);
+      else {
+        li.push(`Categorías en tu hoja: <b>${esc(s.categorias)}</b>. Gastos: <b>${s.gastos}</b>. Extras: <b>${s.extras}</b>.`);
+        if (s.categorias === 0 || s.categorias === 'no existe') consejo = 'Tu hoja no tiene categorías guardadas. Pulsa “Cargar las categorías de ejemplo” (se guardan también en la hoja) o importa tu Excel.';
+        else if (typeof s.categorias === 'string') consejo = 'La celda de categorías de la pestaña Config tiene un formato raro. La app la corrige al leerla, pero conviene guardar las categorías de nuevo desde el Piloto.';
+      }
+    }
+    sh.el.innerHTML = `<h3>🩺 Diagnóstico</h3><ul style="padding-left:18px;line-height:1.7">${li.map((x) => `<li>${x}</li>`).join('')}</ul>${consejo ? `<div class="warnbox">${esc(consejo)}</div>` : ''}<button class="btn sec" id="dgOk" style="margin-top:10px">Cerrar</button>`;
+    $('#dgOk', sh.el).onclick = () => sh.close();
+  }
+
   /* ------------------------------------------------------------------ tarjetas en Ajustes */
   const host = $('#v-set');
   const card = document.createElement('div');
   card.className = 'card';
   card.innerHTML = `<h2>🔒 Candado</h2><div id="pinBox"></div>
+    <h2 style="margin-top:18px">🩺 Diagnóstico</h2><div class="small mut" style="margin-bottom:8px">Si algo no aparece (por ejemplo las categorías), mira qué responde tu hoja y qué hay guardado en este dispositivo.</div><button class="btn sec" id="dgBtn" type="button" style="width:auto;min-height:44px;padding:8px 16px;font-size:15px">🩺 Comprobar ahora</button>
     <h2 style="margin-top:18px">💾 Copia de seguridad</h2><div id="bkBox"></div><input type="file" id="bkIn" accept=".json,application/json" hidden>`;
   if (host) host.appendChild(card);
 
@@ -195,6 +218,7 @@
       const s = rnd(); lsSet('ff.pin', JSON.stringify({ s, h: await sha(s + v) })); paintPin(); FF.toast('🔒 PIN activado'); return;
     }
     if (e.target.closest('#pinOff')) { if (confirm('¿Quitar el PIN?')) { try { localStorage.removeItem('ff.pin'); } catch (er) { /* nada */ } paintPin(); FF.toast('PIN quitado'); } return; }
+    if (e.target.closest('#dgBtn')) return runDiagnose();
     if (e.target.closest('#bkDown')) return downloadBackup();
     if (e.target.closest('#bkUp')) return $('#bkIn', card).click();
   });
