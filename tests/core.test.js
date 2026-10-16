@@ -204,3 +204,39 @@ test('importRows: ids deterministas (reimportar no duplica), tipo devolución, f
   assert.equal(new Set(a.rows.map((r) => r.id)).size, 4);                          // dos filas idénticas siguen siendo dos gastos
   assert.equal(a.rows[2].tipo, C.TIPO_DEV);
 });
+
+test('monthsBetween: orden creciente, cruza años y tolera los extremos al revés', () => {
+  assert.deepEqual(C.monthsBetween('2026-11', '2027-02'), ['2026-11', '2026-12', '2027-01', '2027-02']);
+  assert.deepEqual(C.monthsBetween('2027-02', '2026-11'), ['2026-11', '2026-12', '2027-01', '2027-02']);
+  assert.deepEqual(C.monthsBetween('2026-05', '2026-05'), ['2026-05']);
+});
+
+test('computeRange: suma de meses = mismas cifras que mes a mes (fijos que cambian, devoluciones, categorías, presupuesto)', () => {
+  const d = mkData({
+    config: { categorias: CATS.map((nombre) => ({ nombre, presupuesto: nombre === CATS[1] ? 100 : null })) },
+    gastos: [g('2026-05-10', CATS[1], 100), g('2026-07-02', CATS[1], 50), g('2026-07-09', CATS[1], 20, 'Devolución 🔄'), g('2026-08-01', CATS[1], 999)],
+  });
+  const r = C.computeRange(d, '2026-05', '2026-07');
+  assert.equal(r.n, 3);
+  assert.equal(r.entra, 6000);
+  assert.equal(r.fijos, 1930);                       // (600+10) + (650+10) + (650+10)
+  assert.equal(r.dia, 130);                          // 100 + 50 - 20; agosto queda fuera
+  assert.equal(r.sale, 2060);
+  assert.equal(r.queda, 3940);
+  assert.equal(r.filas.find((f) => f.cat === CATS[0]).total, 1900);                // vivienda: 600 + 650 + 650
+  const sup = r.filas.find((f) => f.cat === CATS[1]);
+  assert.equal(sup.total, 130);
+  assert.equal(sup.presupuesto, 300);                // 100 al mes x 3 meses
+  assert.equal(C.r2(r.filas.reduce((a, f) => a + f.total, 0)), r.sale);
+  const porMes = ['2026-05', '2026-06', '2026-07'].map((m) => C.computeMonth(d, m));
+  assert.deepEqual(r.meses.map((m) => m.queda), porMes.map((m) => m.queda));
+  assert.equal(r.mediaSale, C.r2(2060 / 3));
+});
+
+test('computeRange: un año completo y un solo mes coinciden con computeMonth', () => {
+  const d = mkData({ gastos: [g('2026-04-03', CATS[1], 40)] });
+  assert.equal(C.computeRange(d, '2026-04', '2026-04').queda, C.computeMonth(d, '2026-04').queda);
+  const anio = C.computeRange(d, '2026-01', '2026-12');
+  assert.equal(anio.n, 12);
+  assert.equal(anio.sueldo, 20000);                  // sueldo desde marzo: 10 meses x 2000
+});

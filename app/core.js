@@ -87,6 +87,36 @@
       pctLibre: entra > 0 ? Math.max(0, queda / entra) : 0 };
   }
 
+  /** Meses de un rango 'YYYY-MM'..'YYYY-MM' (ambos incluidos, orden creciente, máx. 120). */
+  function monthsBetween(from, to) {
+    if (from > to) { const t = from; from = to; to = t; }
+    const out = [];
+    for (let m = from; m <= to && out.length < 120; m = shiftMonth(m, 1)) out.push(m);
+    return out;
+  }
+
+  /** Suma varios meses con la misma lógica que computeMonth (para "este año", "de marzo a junio"…). */
+  function computeRange(data, from, to) {
+    const meses = monthsBetween(from, to).map((mk) => computeMonth(data, mk));
+    const sum = (k) => r2(meses.reduce((a, m) => a + m[k], 0));
+    const porCat = new Map();
+    meses.forEach((m) => m.filas.forEach((f) => {
+      const c = porCat.get(f.cat) || { cat: f.cat, fijo: 0, dia: 0, total: 0, presupuesto: null, n: 0 };
+      c.fijo += f.fijo; c.dia += f.dia; c.total += f.total; c.n += 1;
+      if (f.presupuesto != null) c.presupuesto = (c.presupuesto || 0) + f.presupuesto;      // el presupuesto es mensual: se acumula por mes
+      porCat.set(f.cat, c);
+    }));
+    const filas = [...porCat.values()].map((c) => ({ cat: c.cat, fijo: r2(c.fijo), dia: r2(c.dia), total: r2(c.total), presupuesto: c.presupuesto == null ? null : r2(c.presupuesto) }));
+    const sale = sum('sale');
+    const totalSale = sale > 0 ? sale : 0;
+    filas.forEach((f) => { f.pct = totalSale > 0 ? f.total / totalSale : 0; });
+    filas.sort((a, b) => b.total - a.total);
+    const entra = sum('entra');
+    return { from: meses[0].mk, to: meses[meses.length - 1].mk, n: meses.length, entra, sueldo: sum('sueldo'), extras: sum('extras'), fijos: sum('fijos'),
+      subs: sum('subs'), dia: sum('dia'), sale, queda: r2(entra - sale), filas,
+      meses: meses.map((m) => ({ mk: m.mk, entra: m.entra, sale: m.sale, queda: m.queda })), mediaSale: r2(sale / meses.length) };
+  }
+
   /* ------------------------------------------------------------------ diccionario de costumbres y autocompletado */
   const PESO_ORIGEN = { app: 3, historial: 2, semilla: 1 };
 
@@ -309,7 +339,7 @@
     return res;
   }
 
-  return { TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth,
+  return { TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth, monthsBetween, computeRange,
     buildIndex, predictCategory, suggest, topChips, matchCategory, normalizeTicket, groupLines, dominantCategory, legible, splitRows, singleRow,
     parseItems, ticketOf, searchGastos, hashStr, importRows };
 });

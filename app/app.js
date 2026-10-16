@@ -17,7 +17,11 @@
   let data = Object.assign({ rev: null, config: { categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, diccionario: [], gastos: [], extras: [] }, load(LS.data, {}));
   let queue = load(LS.queue, []);
   let index = C.buildIndex(data.diccionario);
-  const ui = { mk: C.monthKey(C.todayISO()), view: 'home', cat: null, catAuto: false, tipo: 'Gasto', fecha: null, net: 'idle', histLimit: 60, suggestSel: -1 };
+  const ui = { mk: C.monthKey(C.todayISO()), view: 'home', cat: null, catAuto: false, tipo: 'Gasto', fecha: null, net: 'idle', histLimit: 60, suggestSel: -1, resMode: 'mes', resYear: new Date().getFullYear(), rFrom: null, rTo: null, resAll: false };
+  ui.rTo = C.monthKey(C.todayISO()); ui.rFrom = C.shiftMonth(ui.rTo, -2);
+  const DEFAULT_CATS = ['🏠 Vivienda (alquiler / hipoteca)', '🛒 Supermercado y comida', '💡 Luz, agua e internet', '🚗 Coche (gasolina, seguro, taller)', '🏍️ Moto (gasolina, seguro, taller, equipación)',
+    '🚌 Transporte público y otros', '👕 Ropa y calzado', '🍻 Ocio, cenas y salidas', '🏥 Salud y cuidado personal', '🎁 Regalos y caprichos', '🎮 Suscripciones',
+    '📈 Inversión', '🛡️ Colchón / ahorro', '🕹️ Hobbys y videojuegos', '🖥️ Decoración, periféricos y gaming', '📦 Otros'];
 
   const cats = () => (data.config.categorias || []).map((c) => (typeof c === 'string' ? c : c.nombre));
   const persistData = () => save(LS.data, data);
@@ -158,10 +162,25 @@
   function pickFrom(title, list, current) {
     return new Promise((resolve) => {
       let done = false;
-      const sh = openSheet(`<h3>${esc(title)}</h3><div class="pick">${list.map((c, i) => `<button data-i="${i}" class="${c === current ? 'on' : ''}">${esc(c)}</button>`).join('') || '<div class="empty">No hay opciones todavía.</div>'}</div>`,
-        { onClose: () => { if (!done) resolve(null); } });
-      sh.el.onclick = (e) => { const b = e.target.closest('button[data-i]'); if (!b) return; done = true; resolve(list[+b.dataset.i]); sh.close(); };
+      const vacio = !list.length;
+      const esCat = /categor/i.test(title);
+      const body = vacio
+        ? `<div class="empty">${configured() ? (esCat ? 'Tu hoja todavía no tiene categorías.' : 'No hay opciones todavía.') : 'Primero conecta tu hoja de Google en Ajustes.'}</div>
+           ${configured() && esCat ? '<button class="btn pri js-defcats">➕ Cargar categorías de ejemplo</button>' : '<button class="btn sec js-goset">⚙️ Abrir ajustes</button>'}`
+        : `<div class="pick">${list.map((c, i) => `<button data-i="${i}" class="${c === current ? 'on' : ''}">${esc(c)}</button>`).join('')}</div>`;
+      const sh = openSheet(`<h3>${esc(title)}</h3>${body}`, { onClose: () => { if (!done) resolve(null); } });
+      sh.el.onclick = (e) => {
+        if (e.target.closest('.js-defcats')) { loadDefaultCats(); sh.close(); return; }
+        if (e.target.closest('.js-goset')) { sh.close(); go('set'); return; }
+        const b = e.target.closest('button[data-i]'); if (!b) return; done = true; resolve(list[+b.dataset.i]); sh.close();
+      };
     });
+  }
+  function loadDefaultCats() {
+    const value = DEFAULT_CATS.map((nombre) => ({ nombre, presupuesto: null }));
+    data.config.categorias = value; persistData();
+    enqueue('configSet', { key: 'categorias', value });
+    renderAll(); toast('✓ Categorías de ejemplo cargadas. Edítalas en la pestaña Config de tu hoja.');
   }
   const pickCategory = (current) => pickFrom('Categoría', cats(), current);
 
@@ -307,25 +326,57 @@
   }
 
   /* ================================================================== RESUMEN */
+  function resRange() {
+    const hoy = C.monthKey(C.todayISO());
+    if (ui.resMode === 'anio') {
+      const y = ui.resYear, ini = `${y}-01`, fin = `${y}-12`;
+      const hasta = ini <= hoy && fin > hoy ? hoy : fin;                       // año en curso: hasta el mes actual (sin mezclar previsiones)
+      return { from: ini, to: hasta, label: `Año ${y}${hasta !== fin ? ' · hasta ' + C.MESES[+hasta.slice(5) - 1].toLowerCase() : ''}` };
+    }
+    if (ui.resMode === 'rango') {
+      const [a, b] = ui.rFrom <= ui.rTo ? [ui.rFrom, ui.rTo] : [ui.rTo, ui.rFrom];
+      return { from: a, to: b, label: `${C.monthLabel(a)} → ${C.monthLabel(b)}` };
+    }
+    return { from: ui.mk, to: ui.mk, label: C.monthLabel(ui.mk) };
+  }
+
+  function renderResCtl() {
+    $$('#resSeg button').forEach((b) => b.classList.toggle('on', b.dataset.m === ui.resMode));
+    $('#resAll').checked = ui.resAll;
+    const box = $('#resExtra');
+    if (ui.resMode === 'anio') box.innerHTML = `<div class="row"><button class="nav-btn" data-y="-1" aria-label="Año anterior">‹</button><div class="grow center"><b>${ui.resYear}</b></div><button class="nav-btn" data-y="1" aria-label="Año siguiente">›</button></div>`;
+    else if (ui.resMode === 'rango') box.innerHTML = `<div class="grid2"><div><label class="f" for="rFrom">Desde</label><input type="month" class="t" id="rFrom" value="${esc(ui.rFrom)}"></div><div><label class="f" for="rTo">Hasta</label><input type="month" class="t" id="rTo" value="${esc(ui.rTo)}"></div></div>`;
+    else box.innerHTML = '<div class="small mut">Cambia de mes con las flechas de arriba.</div>';
+  }
+
   function renderRes() {
-    const m = C.computeMonth(data, ui.mk);
+    const rg = resRange();
+    const m = C.computeRange(data, rg.from, rg.to);
+    const multi = m.n > 1;
     const neg = (n) => esc((n > 0.004 ? '−' : '') + C.fmtEUR(n));
-    $('#resTot').innerHTML = `<h2>${esc(C.monthLabel(ui.mk))}</h2>
+    $('#resTot').innerHTML = `<h2>${esc(rg.label)}${multi ? ` <span class="small" style="text-transform:none">· ${m.n} meses</span>` : ''}</h2>
       <div class="kv"><span>💵 Sueldo</span><b>${esc(C.fmtEUR(m.sueldo))}</b></div>
       <div class="kv"><span>🚀 Extras</span><b>${esc(C.fmtEUR(m.extras))}</b></div>
       <div class="kv"><span>⚙️ Gastos fijos</span><b>${neg(m.fijos - m.subs)}</b></div>
       <div class="kv"><span>🎮 Suscripciones</span><b>${neg(m.subs)}</b></div>
       <div class="kv"><span>📝 Día a día (menos devoluciones)</span><b>${neg(m.dia)}</b></div>
-      <div class="kv tot"><span>🔥 Te queda</span><b style="color:${m.queda < 0 ? 'var(--bad)' : 'var(--acc2)'}">${esc(C.fmtEUR(m.queda))}</b></div>`;
-    const filas = m.filas.filter((f) => Math.abs(f.total) > 0.004);
+      ${multi ? `<div class="kv mut"><span>Gasto medio al mes</span><b>${esc(C.fmtEUR(m.mediaSale))}</b></div>` : ''}
+      <div class="kv tot"><span>🔥 ${multi ? 'Te ha quedado' : 'Te queda'}</span><b style="color:${m.queda < 0 ? 'var(--bad)' : 'var(--acc2)'}">${esc(C.fmtEUR(m.queda))}</b></div>
+      ${rg.to > C.monthKey(C.todayISO()) ? '<div class="small mut" style="margin-top:8px">Los meses que aún no han llegado son una previsión (sueldo y gastos fijos repetidos).</div>' : ''}`;
+
+    const mm = $('#resMeses');
+    mm.hidden = !multi;
+    if (multi) mm.innerHTML = `<h2>Mes a mes</h2>${m.meses.map((x) => `<div class="kv"><span>${esc(C.monthLabel(x.mk))}</span><span class="small mut">${esc(C.fmtEUR(x.entra))} − ${esc(C.fmtEUR(x.sale))}</span><b style="color:${x.queda < 0 ? 'var(--bad)' : 'var(--acc2)'}">${esc(C.fmtEUR(x.queda))}</b></div>`).join('')}`;
+
+    const filas = ui.resAll ? m.filas : m.filas.filter((f) => Math.abs(f.total) > 0.004);
     const max = Math.max(...filas.map((f) => f.pct), 0.0001);
     $('#resCats').innerHTML = filas.length ? filas.map((f) => {
       const over = f.presupuesto != null && f.total > f.presupuesto;
       const w = f.presupuesto != null && f.presupuesto > 0 ? Math.min(100, (f.total / f.presupuesto) * 100) : (f.pct / max) * 100;
       return `<div style="margin-bottom:14px"><div class="kv" style="padding:0"><span>${esc(f.cat)}</span><b>${esc(C.fmtEUR(f.total))}</b></div>
-        <div class="bar ${over ? 'over' : ''}"><i style="width:${Math.max(2, w).toFixed(1)}%"></i></div>
-        <div class="small mut">${f.presupuesto != null ? `${Math.round((f.total / f.presupuesto) * 100)}% de ${esc(C.fmtEUR(f.presupuesto))}` : `${Math.round(f.pct * 100)}% de lo gastado`}${f.fijo ? ` · fijo ${esc(C.fmtEUR(f.fijo))}` : ''}</div></div>`;
-    }).join('') : '<div class="empty">Sin movimientos este mes.</div>';
+        <div class="bar ${over ? 'over' : ''}"><i style="width:${Math.max(f.total > 0.004 ? 2 : 0, w).toFixed(1)}%"></i></div>
+        <div class="small mut">${f.presupuesto != null && f.presupuesto > 0 ? `${Math.round((f.total / f.presupuesto) * 100)}% de ${esc(C.fmtEUR(f.presupuesto))}` : `${Math.round(f.pct * 100)}% de lo gastado`}${f.fijo ? ` · fijo ${esc(C.fmtEUR(f.fijo))}` : ''}</div></div>`;
+    }).join('') : '<div class="empty">Sin movimientos en este periodo.</div>';
   }
 
   /* ================================================================== AJUSTES */
@@ -594,13 +645,24 @@ ${hab ? `\nCOSTUMBRES DEL USUARIO (palabra → categoría), respétalas cuando e
   function renderAll() {
     renderHeader(); setNet();
     $('#onboard').hidden = configured();
+    $('#noCats').hidden = !(configured() && !cats().length);
     if (ui.view === 'home') { renderChips(); renderRecent(); }
     else if (ui.view === 'hist') renderHist();
-    else if (ui.view === 'res') renderRes();
+    else if (ui.view === 'res') { renderResCtl(); renderRes(); }
     else if (ui.view === 'set') settingsStats();
   }
 
   function bind() {
+    $('#resCtl').addEventListener('click', (e) => {
+      const m = e.target.closest('#resSeg button[data-m]'); if (m) { ui.resMode = m.dataset.m; renderResCtl(); renderRes(); return; }
+      const y = e.target.closest('button[data-y]'); if (y) { ui.resYear += +y.dataset.y; renderResCtl(); renderRes(); }
+    });
+    $('#resCtl').addEventListener('change', (e) => {
+      if (e.target.id === 'resAll') { ui.resAll = e.target.checked; renderRes(); }
+      else if (e.target.id === 'rFrom' && e.target.value) { ui.rFrom = e.target.value; renderRes(); }
+      else if (e.target.id === 'rTo' && e.target.value) { ui.rTo = e.target.value; renderRes(); }
+    });
+    document.addEventListener('click', (e) => { if (e.target.closest('#noCats .js-defcats')) loadDefaultCats(); });
     $('#tabs').onclick = (e) => { const b = e.target.closest('button[data-go]'); if (b) go(b.dataset.go); };
     document.addEventListener('click', (e) => { const b = e.target.closest('[data-go]'); if (b && !b.closest('#tabs')) go(b.dataset.go); });
     $('#mPrev').onclick = () => { ui.mk = C.shiftMonth(ui.mk, -1); renderAll(); };

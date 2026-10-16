@@ -136,6 +136,12 @@ details summary{cursor:pointer;color:var(--mut);padding:8px 0}
       <button class="btn pri" data-go="set">⚙️ Abrir ajustes</button>
     </div>
 
+    <div id="noCats" class="card" hidden>
+      <h2>Faltan categorías</h2>
+      <p style="margin:0 0 12px">Tu hoja está conectada pero todavía no tiene categorías. Puedes cargar unas de ejemplo y luego editarlas en la pestaña <b>Config</b> de tu hoja.</p>
+      <button class="btn pri js-defcats">➕ Cargar categorías de ejemplo</button>
+    </div>
+
     <div class="card">
       <label class="f" for="amt">Importe</label>
       <input id="amt" class="t" inputmode="decimal" autocomplete="off" placeholder="0,00" enterkeyhint="next">
@@ -179,7 +185,13 @@ details summary{cursor:pointer;color:var(--mut);padding:8px 0}
 
   <!-- ============ RESUMEN ============ -->
   <section id="v-res" hidden>
+    <div class="card" id="resCtl">
+      <div class="seg" id="resSeg"><button data-m="mes" class="on">Mes</button><button data-m="anio">Año</button><button data-m="rango">Rango</button></div>
+      <div id="resExtra" style="margin-top:10px"></div>
+      <label class="small mut" style="display:flex;gap:8px;align-items:center;margin-top:10px"><input type="checkbox" id="resAll"> Mostrar también las categorías sin gasto</label>
+    </div>
     <div class="card" id="resTot"></div>
+    <div class="card" id="resMeses" hidden></div>
     <div class="card"><h2>Por categoría</h2><div id="resCats"></div></div>
   </section>
 
