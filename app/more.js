@@ -37,6 +37,7 @@
     return head('📖 Empieza aquí') + `
       <div class="card"><div class="kv" style="padding:0"><span><b>Tu progreso</b></span><b>${hechos} de ${pasos.length}</b></div><div class="goalbar" style="margin-top:8px"><i style="width:${(hechos / pasos.length * 100).toFixed(0)}%"></i></div>
         <div class="small mut" style="margin-top:6px">${hechos === pasos.length ? '🎉 ¡Lo tienes todo configurado!' : 'Sin prisa: puedes ir haciéndolo poco a poco, y volver aquí cuando quieras.'}</div></div>
+      <div style="margin:0 0 12px"><button class="btn sec" data-tour type="button" style="width:auto;min-height:44px;padding:8px 18px;font-size:15px">🧭 Hacer el tour guiado de la pantalla</button></div>
       <div class="guia">${pasos.map((p, i) => `<div class="card gpaso ${p.ok ? 'ok' : ''}"><div class="gn">${p.ok ? '✓' : i + 1}</div><div class="gt"><b>${esc(p.t)}</b><div class="small mut">${esc(p.s)}</div></div>
         <button class="btn sec" data-g="${p.btn[1]}" style="width:auto;min-height:40px;padding:8px 14px;font-size:14px">${esc(p.btn[0])}</button></div>`).join('')}</div>
       ${bloque('🧭 Cómo leer tu Centro de Mando', `<ul class="glist"><li><b>Ganado</b>: tu sueldo del mes + los extras que hayas apuntado (horas extra, ventas…).</li><li><b>Gastado</b>: tus gastos fijos + suscripciones + lo que apuntas día a día, menos las devoluciones.</li><li><b>Me queda libre</b>: lo ganado menos lo gastado.</li><li><b>La barra</b> mide cuánto de lo ganado ya has gastado: <span style="color:var(--acc2)">cian</span> hasta el 50 %, <span style="color:var(--warn)">naranja</span> del 50 al 80 % y <span style="color:var(--bad)">rojo</span> a partir del 80 %.</li></ul>`)}
@@ -93,6 +94,7 @@
   pcMain.addEventListener('click', (e) => {
     const g = e.target.closest('[data-g]');
     if (g) { const v = g.dataset.g; if (v === 'set') toSettings(); else FF.openPage(v); return; }
+    if (e.target.closest('[data-tour]')) { if (FF.startTour) FF.startTour(); return; }
     const gm = e.target.closest('[data-gm]'); if (gm) { FF.ui.mk = C.shiftMonth(FF.ui.mk, +gm.dataset.gm); FF.renderAll(); return; }
     const gy = e.target.closest('[data-gy]'); if (gy) { st.gy += +gy.dataset.gy; FF.renderAll(); }
   });
@@ -225,9 +227,20 @@
   $('#bkIn', card).addEventListener('change', (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) restoreBackup(f); });
   paintPin(); paintBackup();
 
-  /* ------------------------------------------------------------------ primera vez: abre la guía */
-  if (!lsGet('ff.guiaVista') && !data().gastos.length && !(data().config.sueldo || []).length) {
-    lsSet('ff.guiaVista', '1');
-    setTimeout(() => FF.openPage('guia'), 400);
-  }
+  /* ------------------------------------------------------------------ 👁️ ocultar importes */
+  const paintEye = () => {
+    const on = document.documentElement.classList.contains('priv');
+    document.querySelectorAll('[data-eye]').forEach((b) => {
+      if (b.id === 'eyeBtn') b.textContent = on ? '🙈' : '👁️'; else b.textContent = on ? '🙈 Mostrar importes' : '👁️ Ocultar importes';
+      b.setAttribute('aria-pressed', on ? 'true' : 'false');
+    });
+  };
+  if (lsGet('ff.priv') === '1') document.documentElement.classList.add('priv');
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('[data-eye]')) return;
+    const on = document.documentElement.classList.toggle('priv');
+    lsSet('ff.priv', on ? '1' : '0'); paintEye();
+  });
+  paintEye();
+  FF.paintEye = paintEye;
 })();

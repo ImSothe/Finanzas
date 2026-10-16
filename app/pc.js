@@ -15,7 +15,7 @@
   try { pref = localStorage.getItem(KEY) || 'auto'; } catch (e) { /* sin almacenamiento */ }
   let view = 'cmd';
   let pending = false, mpage = false, force = false;
-  const st = { pil: null, gMes: null, gQ: '', gLimit: 150, anio: new Date().getFullYear(), q: { imp: '', con: '', fec: '', tipo: 'Gasto', cat: '', auto: false }, x: { fec: '', tipo: '', imp: '', det: '' } };
+  const st = { hasta: true, pil: null, gMes: null, gQ: '', gLimit: 150, anio: new Date().getFullYear(), q: { imp: '', con: '', fec: '', tipo: 'Gasto', cat: '', auto: false }, x: { fec: '', tipo: '', imp: '', det: '' } };
   const data = () => FF.data;
   const cats = () => FF.cats();
   const hoy = () => C.todayISO();
@@ -37,7 +37,7 @@
     <button data-v="piloto">⚙️ Piloto Automático</button>
     <button data-v="guia">📖 Empieza aquí</button>
     <button data-v="ajustes">🔧 Ajustes y conexión</button>
-    <div class="pc-foot"><span id="pcSync" class="chip">…</span><button id="pcToMobile" class="pc-link" type="button">📱 Vista simplificada</button></div>`;
+    <div class="pc-foot"><button class="pc-eye" data-eye type="button" title="Ocultar o mostrar los importes">👁️ Ocultar importes</button><span id="pcSync" class="chip">…</span><button id="pcToMobile" class="pc-link" type="button">📱 Vista simplificada</button></div>`;
   const advBtn = document.createElement('button');
   advBtn.id = 'pcToAdv'; advBtn.type = 'button'; advBtn.hidden = true; advBtn.textContent = '🖥️ Modo avanzado';
   advBtn.addEventListener('click', () => setPref('auto'));
@@ -262,7 +262,9 @@
   function anioView() {
     const Y = st.anio, hoyMk = C.monthKey(hoy());
     const meses = Array.from({ length: 12 }, (_, i) => `${Y}-${String(i + 1).padStart(2, '0')}`);
-    const ms = meses.map((mk) => C.computeMonth(data(), mk));
+    const lim = st.hasta ? hoyMk : '9999-99';                                // "Hasta hoy": los meses que aún no han llegado cuentan como vacíos
+    const vacio = (m) => ({ ...m, sueldo: 0, extras: 0, entra: 0, fijos: 0, subs: 0, dia: 0, sale: 0, queda: 0, filas: m.filas.map((f) => ({ ...f, fijo: 0, dia: 0, total: 0 })) });
+    const ms = meses.map((mk) => (mk > lim ? vacio(C.computeMonth(data(), mk)) : C.computeMonth(data(), mk)));
     const apart = (m) => m.filas.filter((f) => /inversi|colch/i.test(f.cat)).reduce((a, f) => a + f.total, 0);
     const filas = [
       ['💵 Mi sueldo', (m) => m.sueldo, ''], ['🚀 Dinero extra', (m) => m.extras, ''], ['💰 TOTAL GANADO', (m) => m.entra, 'tot g'],
@@ -271,19 +273,20 @@
     ];
     const celda = (v, mk, neg) => `<td class="r ${mk > hoyMk ? 'fut' : ''}" ${neg && v < 0 ? 'style="color:var(--bad);font-weight:700"' : ''}>${v === 0 ? '<span class="mut">–</span>' : esc(fmt(v))}</td>`;
     const totalAnio = ms.reduce((a, m) => a + m.sale, 0);
-    const sv = C.savingsSeries(data(), `${Y}-12`), svBy = {}; sv.filas.forEach((f) => { svBy[f.mk] = f; });
+    const sv = C.savingsSeries(data(), `${Y}-12`), svBy = {}; sv.filas.forEach((f) => { if (f.mk <= lim) svBy[f.mk] = f; });
+    sv.filas = sv.filas.filter((f) => f.mk <= lim);
     const dash = (v, i, cls) => (v == null ? '<td class="r mut">–</td>' : `<td class="r ${meses[i] > hoyMk ? 'fut' : ''}">${esc(cls === 'pct' ? Math.round(v * 100) + '%' : fmt(v))}</td>`);
     const svRows = sv.desde ? `
         <tr class="ap"><td>📈 % del sueldo+extras</td>${ms.map((m, i) => dash(m.entra > 0 ? apart(m) / m.entra : null, i, 'pct')).join('')}<td></td></tr>
         <tr class="g"><td>💰 Ahorrado en el mes</td>${meses.map((mk, i) => dash(svBy[mk] ? svBy[mk].ahorrado : null, i)).join('')}<td class="r"><b>${esc(fmt(C.r2(sv.filas.reduce((a, f) => a + f.ahorrado, 0))))}</b></td></tr>
         <tr class="tot b"><td>🏦 MIS AHORROS A FINAL DE MES</td>${meses.map((mk, i) => dash(svBy[mk] ? svBy[mk].acumulado : null, i)).join('')}<td></td></tr>
         <tr class="ap"><td>🌅 Empiezo el mes con (del mes anterior)</td>${meses.map((mk, i) => dash(svBy[mk] ? C.r2(svBy[mk].acumulado - svBy[mk].ahorrado) : null, i)).join('')}<td></td></tr>` : '';
-    return head('📅 Resumen del Año', `<button class="nav-btn" data-y="-1" aria-label="Año anterior">‹</button><b style="min-width:60px;text-align:center;font-size:20px">${Y}</b><button class="nav-btn" data-y="1" aria-label="Año siguiente">›</button>`) + `
+    return head('📅 Resumen del Año', `<div class="seg" style="min-width:250px"><button data-hasta="1" class="${st.hasta ? 'on' : ''}">Hasta hoy</button><button data-hasta="0" class="${st.hasta ? '' : 'on'}">Año completo</button></div><button class="nav-btn" data-y="-1" aria-label="Año anterior">‹</button><b style="min-width:60px;text-align:center;font-size:20px">${Y}</b><button class="nav-btn" data-y="1" aria-label="Año siguiente">›</button>`) + `
       <div class="card" style="padding:0;overflow:auto"><table class="tbl yr"><thead><tr><th style="min-width:250px">Concepto</th>${meses.map((mk, i) => `<th class="r">${mesCorto(i + 1)}</th>`).join('')}<th class="r">TOTAL ${Y}</th></tr></thead><tbody>
         ${filas.map(([n, f, cls]) => `<tr class="${cls}"><td>${esc(n)}</td>${ms.map((m, i) => celda(C.r2(f(m)), meses[i], cls.includes('b'))).join('')}<td class="r"><b>${esc(fmt(C.r2(ms.reduce((a, m) => a + f(m), 0))))}</b></td></tr>`).join('')}
         ${svRows}
       </tbody></table></div>
-      <div class="small mut" style="margin:8px 4px 16px">Los meses futuros (en cursiva) son una previsión: repiten tu sueldo y tus gastos fijos.</div>
+      <div class="small mut" style="margin:8px 4px 16px">${st.hasta ? 'Solo cuenta hasta el mes actual. Pulsa “Año completo” para ver también la previsión de los meses que faltan.' : 'Los meses futuros (en cursiva) son una previsión: repiten tu sueldo y tus gastos fijos.'}</div>
       <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>🧾 Gasto por categoría en el año</h2></div><table class="tbl yr"><thead><tr><th style="min-width:250px">Categoría</th>${meses.map((mk, i) => `<th class="r">${mesCorto(i + 1)}</th>`).join('')}<th class="r">TOTAL</th><th class="r">%</th></tr></thead><tbody>
         ${(() => {
     const nombres = cats().slice(); ms.forEach((m) => m.filas.forEach((f) => { if (!nombres.includes(f.cat)) nombres.push(f.cat); }));
@@ -637,6 +640,7 @@
     if (td) { FF.setConfig('tiposExtra', (data().config.tiposExtra || []).filter((_, i) => i !== +td.dataset.tdel)); return now(); }
     if (e.target.closest('#xAdd')) return nuevoExtra();
     if (e.target.closest('#gMore')) { st.gLimit += 150; return render(); }
+    const hs = e.target.closest('[data-hasta]'); if (hs) { st.hasta = hs.dataset.hasta === '1'; return render(); }
     const y = e.target.closest('button[data-y]'); if (y) { st.anio += +y.dataset.y; return render(); }
     const tk = e.target.closest('[data-tk]'); if (tk) return FF.openDetail(tk.dataset.tk);
     const del = e.target.closest('[data-del]');

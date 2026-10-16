@@ -262,6 +262,46 @@ html.locked body>*:not(#lockScr){visibility:hidden!important}
 .gbars{width:100%;max-width:980px;height:auto;display:block;margin:0 auto}
 .gnav{display:inline-flex;align-items:center;gap:6px}
 body.pm .gpaso{flex-wrap:wrap}
+.pc-eye{color:var(--mut);font-size:13px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:#ffffff08}
+.pc-eye:hover{color:var(--txt);border-color:var(--acc)}
+html.priv .big,html.priv .pc-card .v,html.priv .pc-card .s,html.priv .tbl td.r,html.priv .tbl td.nb,html.priv .tbl input.cell.r,html.priv .kv b,html.priv .amt,html.priv .tk-line b,html.priv #toast b,html.priv .gleg b,html.priv .gdonut text,html.priv .pc-batmsg{filter:blur(7px);user-select:none;transition:filter .15s}
+html.priv #eyeBtn{background:linear-gradient(135deg,#22d3ee,#3b82f6)}
+/* ---- bienvenida y tour ---- */
+#wiz{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;background:radial-gradient(900px 520px at 50% -10%,#22d3ee26,transparent 62%),radial-gradient(700px 500px at 100% 100%,#8b5cf622,transparent 60%),#070b17}
+.wbox{position:relative;width:min(480px,100%);text-align:center;padding:8px 4px}
+.wbox h1{font-size:30px;line-height:1.15;margin:8px 0;letter-spacing:-.5px}
+.wp{color:var(--mut);margin:0 0 18px;font-size:16px;line-height:1.45}
+.wemo{font-size:54px;margin-top:6px}
+.wdots{display:flex;gap:8px;justify-content:center;margin-bottom:22px}
+.wdots i{width:26px;height:6px;border-radius:9px;background:#ffffff1c}
+.wdots i.on{background:linear-gradient(90deg,#22d3ee,#3b82f6);width:44px}
+.wdots i.ok{background:#22d3ee66}
+.wskip{position:absolute;right:0;top:-6px;color:var(--mut);font-size:14px;padding:8px}
+.wlink{display:block;margin:14px auto 0;color:var(--mut);font-size:14px;text-decoration:underline;padding:6px}
+.wmoney{display:flex;align-items:center;gap:10px;margin:6px 0 20px}
+.wmoney input{font-size:38px;text-align:center;font-weight:800;padding:18px}
+.wmoney span{font-size:30px;font-weight:800;color:var(--mut)}
+.wchips{display:flex;flex-wrap:wrap;gap:8px;justify-content:center;margin-bottom:14px;max-height:34vh;overflow:auto;padding:4px}
+.wchip{padding:10px 14px;border-radius:999px;border:1px solid var(--line);background:#ffffff08;color:var(--mut);font-size:15px;transition:all .12s}
+.wchip.on{background:linear-gradient(135deg,#22d3ee33,#3b82f633);border-color:var(--acc);color:var(--txt)}
+.wadd{display:flex;gap:8px}.wadd .btn{width:auto;min-height:48px;padding:8px 16px;font-size:15px}
+.wopt{display:block;width:100%;text-align:left;padding:16px 18px;border-radius:16px;border:2px solid var(--line);background:#ffffff08;margin-bottom:10px}
+.wopt b{display:block;font-size:17px;margin-bottom:4px}.wopt span{color:var(--mut);font-size:14px}
+.wopt.on{border-color:var(--acc);background:#22d3ee14}
+.wlbl{color:var(--mut);font-size:14px;margin-top:4px}
+.wbig{font-size:54px;font-weight:800;letter-spacing:-1px;background:linear-gradient(180deg,#fff,#a9e9ff);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;margin:4px 0 10px}
+.wbar{height:14px;border-radius:999px;background:#0a1128;border:1px solid #2b3c7a99;overflow:hidden;margin:0 0 16px}
+.wbar i{display:block;height:100%;background:linear-gradient(90deg,#22d3ee,#38bdf8);border-radius:999px;box-shadow:0 0 14px #22d3ee66}
+.btn[disabled]{cursor:not-allowed}
+.tblock{position:fixed;inset:0;z-index:299}
+.tspot{position:fixed;z-index:300;border-radius:14px;box-shadow:0 0 0 9999px #030612d0,0 0 0 2px var(--acc),0 0 28px #22d3ee66;transition:all .25s ease;pointer-events:none}
+.tcard{position:fixed;z-index:301;background:linear-gradient(180deg,#16225a,#0e1631);border:1px solid #3a4f9a;border-radius:18px;padding:16px 18px;box-shadow:0 18px 50px #000a;text-align:left}
+.tcard .tn{font-size:12px;color:var(--mut);margin-bottom:4px}
+.tcard h3{margin:0 0 6px;font-size:18px}
+.tcard p{margin:0 0 14px;color:var(--txt);line-height:1.45;font-size:15px}
+.tb{display:flex;align-items:center;gap:8px}
+.tb .btn{width:auto;min-height:40px;padding:8px 16px;font-size:15px;border-radius:12px}
+.tskip{color:var(--mut);font-size:14px;padding:8px 4px}
 </style>
 </head>
 <body>
@@ -270,6 +310,7 @@ body.pm .gpaso{flex-wrap:wrap}
     <button class="nav-btn" id="mPrev" aria-label="Mes anterior">‹</button>
     <div class="grow" id="mLabel">…</div>
     <button class="nav-btn" id="mNext" aria-label="Mes siguiente">›</button>
+    <button class="nav-btn" id="eyeBtn" data-eye aria-label="Ocultar o mostrar los importes" title="Ocultar o mostrar los importes">👁️</button>
     <span class="chip" id="sync" role="status">…</span>
   </div>
   <div class="hero">
@@ -403,5 +444,6 @@ body.pm .gpaso{flex-wrap:wrap}
 <script src="app.js"></script>
 <script src="pc.js"></script>
 <script src="more.js"></script>
+<script src="onboard.js"></script>
 </body>
 </html>

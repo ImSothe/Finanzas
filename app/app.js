@@ -783,7 +783,7 @@
     if (new URLSearchParams(location.search).get('cam') === '1') setTimeout(() => $('#camIn').click(), 300);
     Object.assign(FF, { get data() { return data; }, get cfg() { return cfg; }, get index() { return index; }, ui, enqueue, addGastos, addExtraRow, delExtra, delGasto,
       learn, persist: persistData, openSheet, pickCategory, scan: scanFile, toast, esc, cats, openDetail, goMobile, renderAll, refresh, flush, rebuildIndex, loadDefaultCats,
-      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, diagnose,  loadXLSX: () => loadXLSX(), get queue() { return queue; } });
+      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, diagnose, defaultCats: DEFAULT_CATS.slice(),  loadXLSX: () => loadXLSX(), get queue() { return queue; } });
     window.__ff = { get data() { return data; }, get queue() { return queue; }, get cfg() { return cfg; }, ui, refresh, flush, go, renderAll, scan: scanFile, save: saveCfg };
   }
   init();
