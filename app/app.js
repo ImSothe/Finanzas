@@ -205,8 +205,10 @@
     const q = $('#queda'); q.textContent = C.fmtEUR(m.queda); q.classList.toggle('neg', m.queda < 0);
     const fill = $('#batFill');
     const colores = { verde: 'var(--acc)', amarillo: 'var(--warn)', rojo: 'var(--bad)', vacio: 'var(--line)' };
-    fill.style.width = (m.semaforo === 'vacio' ? 0 : Math.max(3, Math.min(100, m.pctGastado * 100))) + '%';
-    fill.style.background = colores[m.semaforo];
+    const wPct = m.semaforo === 'vacio' ? 0 : Math.max(3, Math.min(100, m.pctGastado * 100));
+    fill.style.width = wPct + '%';
+    fill.style.backgroundSize = (wPct ? 10000 / wPct : 100) + '% 100%';          // el degradado cian → naranja → rojo pertenece al carril, no a la barra
+    fill.style.boxShadow = `0 0 14px ${colores[m.semaforo] === 'var(--line)' ? 'transparent' : colores[m.semaforo]}`;
     const msg = C.semaforoMsg(m);
     const bm = $('#batMsg'); bm.textContent = msg; bm.style.color = colores[m.semaforo] === 'var(--line)' ? 'var(--mut)' : colores[m.semaforo];
   }

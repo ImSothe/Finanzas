@@ -84,7 +84,7 @@
     const col = { verde: 'var(--acc)', amarillo: 'var(--warn)', rojo: 'var(--bad)', vacio: 'var(--line)' }[m.semaforo];
     const msg = C.semaforoMsg(m);
     const w = m.semaforo === 'vacio' ? 0 : Math.max(2, Math.min(100, m.pctGastado * 100));
-    return `<div class="pc-bat"><div class="pc-batbar"><i style="width:${w.toFixed(1)}%;background:${col}"></i></div><div class="pc-batmsg" style="color:${m.semaforo === 'vacio' ? 'var(--mut)' : col}">${esc(msg)}</div></div>`;
+    return `<div class="pc-bat"><div class="pc-batbar"><i style="width:${w.toFixed(1)}%;background-size:${(w ? 10000 / w : 100).toFixed(1)}% 100%;box-shadow:0 0 16px ${m.semaforo === 'vacio' ? 'transparent' : col}"></i></div><div class="pc-batmsg" style="color:${m.semaforo === 'vacio' ? 'var(--mut)' : col}">${esc(msg)}</div></div>`;
   };
 
   function yearsList() {
