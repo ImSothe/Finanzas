@@ -442,12 +442,23 @@
       </div></div>`;
   }
 
+  /** Sin categorías no se puede apuntar nada: ofrece las 19 de ejemplo, importar el Excel o crearlas en el Piloto. */
+  function noCatsCard() {
+    return `<div class="card" style="border-color:var(--acc)"><h2>👋 Aún no tienes categorías</h2>
+      <p style="margin:0 0 12px">Sin categorías no se puede clasificar ningún gasto. Elige cómo empezar:</p>
+      <div class="pc-btns" style="flex-wrap:wrap"><button class="btn pri" id="ncDef" type="button">➕ Cargar las 19 categorías de ejemplo</button>
+      <button class="btn sec" id="ncXl" type="button" style="width:auto">📥 Importar mi Excel</button>
+      <button class="btn sec" id="ncPil" type="button" style="width:auto">⚙️ Crearlas yo en el Piloto</button></div>
+      <input type="file" id="ncFile" accept=".xlsx,.xls,.csv" hidden></div>`;
+  }
+
   /* ------------------------------------------------------------------ render */
   function render() {
     if ((!FF.pcActive && !mpage) || view === 'ajustes') return;
     $$('#pcNav button[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === view));
     const keepScroll = window.scrollY;
-    pcMain.innerHTML = ({ cmd: cmdView, gastos: () => gastosView('gastos'), dev: devView, extras: extrasView, anio: anioView, ahorros: ahorrosView, deudas: deudasView, piloto: pilotoView, ...(FF.views || {}) }[view] || cmdView)();
+    const sinCats = !cats().length && !['guia', 'graficos', 'piloto', 'deudas', 'ahorros'].includes(view);
+    pcMain.innerHTML = (sinCats ? noCatsCard() : '') + ({ cmd: cmdView, gastos: () => gastosView('gastos'), dev: devView, extras: extrasView, anio: anioView, ahorros: ahorrosView, deudas: deudasView, piloto: pilotoView, ...(FF.views || {}) }[view] || cmdView)();
     if (view === 'cmd') { fillDatalist(); }
     window.scrollTo(0, keepScroll);
   }
@@ -568,6 +579,9 @@
     if (e.target.closest('#qSave')) return quickSave();
     if (e.target.closest('#qCam')) return $('#pcCam').click();
     if (e.target.closest('#pcBack')) return closePage(false);
+    if (e.target.closest('#ncDef')) return FF.loadDefaultCats();
+    if (e.target.closest('#ncXl')) return $('#ncFile').click();
+    if (e.target.closest('#ncPil')) return FF.openPage('piloto');
     if (e.target.closest('#nAdd')) return nuevaFila();
     const da = e.target.closest('[data-dadd]'); if (da) return deudaAdd(da.dataset.dadd);
     const dd = e.target.closest('[data-ddel]');
@@ -650,6 +664,7 @@
     if (t.id === 'qFec') { st.q.fec = t.value; return; }
     if (t.id === 'qTipo') { st.q.tipo = t.value; st.q.cat = ''; st.q.auto = false; pending = false; return render(); }
     if (t.id === 'qCat') { st.q.cat = t.value; st.q.auto = false; return; }
+    if (t.id === 'ncFile') { const f = t.files[0]; t.value = ''; if (f) FF.importXlsx(f); return; }
     if (t.id === 'pcCam') { const f = t.files[0]; t.value = ''; if (f) FF.scan(f); return; }
     if (t.dataset && t.dataset.id && t.dataset.f) editarCampo(t);
   });

@@ -187,8 +187,8 @@
       const vacio = !list.length;
       const esCat = /categor/i.test(title);
       const body = vacio
-        ? `<div class="empty">${configured() ? (esCat ? 'Tu hoja todavía no tiene categorías.' : 'No hay opciones todavía.') : 'Primero conecta tu hoja de Google en Ajustes.'}</div>
-           ${configured() && esCat ? '<button class="btn pri js-defcats">➕ Cargar categorías de ejemplo</button>' : '<button class="btn sec js-goset">⚙️ Abrir ajustes</button>'}`
+        ? `<div class="empty">${esCat ? 'Todavía no tienes categorías.' : (configured() ? 'No hay opciones todavía.' : 'Primero conecta tu hoja de Google en Ajustes.')}</div>
+           ${esCat ? '<button class="btn pri js-defcats">➕ Cargar las categorías de ejemplo</button>' : '<button class="btn sec js-goset">⚙️ Abrir ajustes</button>'}`
         : `<div class="pick">${list.map((c, i) => `<button data-i="${i}" class="${c === current ? 'on' : ''}">${esc(c)}</button>`).join('')}</div>`;
       const sh = openSheet(`<h3>${esc(title)}</h3>${body}`, { onClose: () => { if (!done) resolve(null); } });
       sh.el.onclick = (e) => {
@@ -202,7 +202,7 @@
     const value = DEFAULT_CATS.map((nombre) => ({ nombre, presupuesto: null }));
     data.config.categorias = value; persistData();
     enqueue('configSet', { key: 'categorias', value });
-    renderAll(); toast('✓ Categorías de ejemplo cargadas. Edítalas en la pestaña Config de tu hoja.');
+    renderAll(); toast('✓ Categorías cargadas. Puedes editarlas en Piloto Automático.');
   }
   const pickCategory = (current) => pickFrom('Categoría', cats(), current);
 
@@ -701,7 +701,7 @@
   function renderAll() {
     renderHeader(); setNet();
     $('#onboard').hidden = configured();
-    $('#noCats').hidden = !(configured() && !cats().length);
+    $('#noCats').hidden = !!cats().length;
     if (ui.view === 'home') { renderChips(); renderRecent(); }
     else if (ui.view === 'hist') renderHist();
     else if (ui.view === 'res') { renderResCtl(); renderRes(); }
