@@ -14,7 +14,7 @@
   let pref = 'auto';
   try { pref = localStorage.getItem(KEY) || 'auto'; } catch (e) { /* sin almacenamiento */ }
   let view = 'cmd';
-  let pending = false, mpage = false;
+  let pending = false, mpage = false, force = false;
   const st = { pil: null, gMes: null, gQ: '', gLimit: 150, anio: new Date().getFullYear(), q: { imp: '', con: '', fec: '', tipo: 'Gasto', cat: '', auto: false }, x: { fec: '', tipo: '', imp: '', det: '' } };
   const data = () => FF.data;
   const cats = () => FF.cats();
@@ -60,13 +60,16 @@
     syncLayoutSelect();
   }
 
+  /** Redibuja ya (tras guardar/borrar), aunque el cursor siga en un campo: así lo añadido se ve al instante. */
+  function now() { pending = false; force = true; try { FF.renderAll(); } finally { force = false; } }
+
   const MAP = { home: 'cmd', hist: 'gastos', res: 'anio', set: 'ajustes' };
   FF.pcGo = (v) => { view = MAP[v] || v; apply(); window.scrollTo(0, 0); };
   FF.onNet = (t, k) => { const c = $('#pcSync'); if (c) { c.textContent = t; c.className = 'chip ' + k; } };
   FF.onRender = () => {
     if (view === 'ajustes' || (!FF.pcActive && !mpage)) return;
     const a = document.activeElement;
-    if (a && pcMain.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { pending = true; return; }   // no interrumpir mientras escribes
+    if (!force && a && pcMain.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { pending = true; return; }   // no interrumpir mientras escribes (salvo que acabes de guardar algo)
     render();
   };
   document.addEventListener('focusout', () => { if (pending) setTimeout(() => { const a = document.activeElement; if (!(a && pcMain.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName))) { pending = false; if ((FF.pcActive || mpage) && view !== 'ajustes') render(); } }, 120); });
@@ -414,7 +417,7 @@
     }
     Object.assign(st.q, { imp: '', con: '', fec: '', cat: '', auto: false, tipo: extra ? 'Gasto' : q.tipo });
     if (C.monthKey(fecha) !== FF.ui.mk) FF.ui.mk = C.monthKey(fecha);
-    pending = false; FF.renderAll();
+    now();
     setTimeout(() => { const i = $('#qImp'); if (i) i.focus(); }, 30);
   }
 
@@ -424,7 +427,7 @@
     if (!cat) { shake($('#nCat')); FF.toast('Elige una categoría'); return; }
     const row = { id: C.uuid(), fecha, categoria: cat, importe: imp, tipo: $('#nTipo').value, detalle: $('#nDet').value.trim(), comercio: '', items: '', ticketId: '', origen: 'app' };
     FF.addGastos([row]); if (row.detalle) FF.learn(row.detalle, cat);
-    FF.toast('✓ Gasto añadido'); pending = false; FF.renderAll();
+    FF.toast('✓ Gasto añadido'); now();
     setTimeout(() => { const i = $('#nImp'); if (i) i.focus(); }, 30);
   }
 
@@ -440,7 +443,7 @@
     const n2 = (x) => String(x).replace('.', ','), det = $('#xDet').value.trim(), horas = h > 0 && t > 0 ? `${n2(h)} h × ${n2(t)} €${f > 0 ? ' + ' + n2(f) + ' € fijos' : ''}` : '';
     FF.addExtraRow({ id: C.uuid(), fecha: $('#xFec').value || hoy(), tipo, importe: total, detalle: [horas, det].filter(Boolean).join(' · ') });
     if (t > 0 && t !== data().config.tarifaHora) FF.setConfig('tarifaHora', t);
-    FF.toast(`✓ Extra añadido: ${esc(fmt(total))}`); pending = false; FF.renderAll();
+    FF.toast(`✓ Extra añadido: ${esc(fmt(total))}`); now();
   }
 
   /* ---- deudas */
@@ -472,7 +475,7 @@
     const l = (data().config.suscripciones || []).map((x) => Object.assign({}, x)), s0 = l[+el.dataset.sub], f = el.dataset.f;
     if (!s0) return;
     if (f === 'importe') { const n = C.parseAmount(el.value); if (n == null || n < 0) { render(); return; } s0.importe = n; } else if (f === 'activa') s0.activa = el.checked; else s0.nombre = el.value.trim();
-    FF.setConfig('suscripciones', l); FF.toast('✓ Guardado'); pending = false; FF.renderAll();
+    FF.setConfig('suscripciones', l); FF.toast('✓ Guardado'); now();
   }
 
   function editarCampo(el) {
@@ -513,37 +516,37 @@
       const n = $('#pCatNew').value.trim();
       if (!n) return shake($('#pCatNew'));
       if (cats().some((c) => C.norm(c) === C.norm(n))) { FF.toast('Esa categoría ya existe'); return; }
-      FF.setConfig('categorias', catObjs().concat([{ nombre: n, presupuesto: null }])); FF.toast('✓ Categoría añadida'); pending = false; return FF.renderAll();
+      FF.setConfig('categorias', catObjs().concat([{ nombre: n, presupuesto: null }])); FF.toast('✓ Categoría añadida'); return now();
     }
     const cd = e.target.closest('[data-catdel]');
-    if (cd) { if (confirm(`¿Quitar “${cd.dataset.catdel}”? Sus gastos no se borran: pasarán a “Sin categoría”.`)) { FF.setConfig('categorias', catObjs().filter((c) => c.nombre !== cd.dataset.catdel)); pending = false; FF.renderAll(); } return; }
+    if (cd) { if (confirm(`¿Quitar “${cd.dataset.catdel}”? Sus gastos no se borran: pasarán a “Sin categoría”.`)) { FF.setConfig('categorias', catObjs().filter((c) => c.nombre !== cd.dataset.catdel)); now(); } return; }
     if (e.target.closest('#pSubAdd')) {
       const n = $('#pSubN').value.trim(), i = C.parseAmount($('#pSubI').value);
       if (!n) return shake($('#pSubN'));
       if (i == null || i < 0) return shake($('#pSubI'));
-      FF.setConfig('suscripciones', (data().config.suscripciones || []).concat([{ nombre: n, importe: i, activa: true }])); pending = false; return FF.renderAll();
+      FF.setConfig('suscripciones', (data().config.suscripciones || []).concat([{ nombre: n, importe: i, activa: true }])); return now();
     }
     const sd = e.target.closest('[data-subdel]');
-    if (sd) { FF.setConfig('suscripciones', (data().config.suscripciones || []).filter((_, i) => i !== +sd.dataset.subdel)); pending = false; return FF.renderAll(); }
+    if (sd) { FF.setConfig('suscripciones', (data().config.suscripciones || []).filter((_, i) => i !== +sd.dataset.subdel)); return now(); }
     if (e.target.closest('#pTipoAdd')) {
       const n = $('#pTipoN').value.trim(); if (!n) return shake($('#pTipoN'));
-      FF.setConfig('tiposExtra', (data().config.tiposExtra || []).concat([n])); pending = false; return FF.renderAll();
+      FF.setConfig('tiposExtra', (data().config.tiposExtra || []).concat([n])); return now();
     }
     const td = e.target.closest('[data-tdel]');
-    if (td) { FF.setConfig('tiposExtra', (data().config.tiposExtra || []).filter((_, i) => i !== +td.dataset.tdel)); pending = false; return FF.renderAll(); }
+    if (td) { FF.setConfig('tiposExtra', (data().config.tiposExtra || []).filter((_, i) => i !== +td.dataset.tdel)); return now(); }
     if (e.target.closest('#xAdd')) return nuevoExtra();
     if (e.target.closest('#gMore')) { st.gLimit += 150; return render(); }
     const y = e.target.closest('button[data-y]'); if (y) { st.anio += +y.dataset.y; return render(); }
     const tk = e.target.closest('[data-tk]'); if (tk) return FF.openDetail(tk.dataset.tk);
     const del = e.target.closest('[data-del]');
-    if (del) { if (confirm('¿Eliminar este gasto?')) { FF.delGasto(del.dataset.del); FF.toast('Eliminado'); pending = false; FF.renderAll(); } return; }
+    if (del) { if (confirm('¿Eliminar este gasto?')) { FF.delGasto(del.dataset.del); FF.toast('Eliminado'); now(); } return; }
     const xd = e.target.closest('[data-xdel]');
-    if (xd && confirm('¿Eliminar este extra?')) { FF.delExtra(xd.dataset.xdel); pending = false; FF.renderAll(); }
+    if (xd && confirm('¿Eliminar este extra?')) { FF.delExtra(xd.dataset.xdel); now(); }
   });
 
   pcMain.addEventListener('change', (e) => {
     const t = e.target;
-    if (t.id === 'pcMes' || t.id === 'pcAnio') { const m = $('#pcMes').value.padStart(2, '0'), y = $('#pcAnio').value; FF.ui.mk = `${y}-${m}`; pending = false; FF.renderAll(); return; }
+    if (t.id === 'pcMes' || t.id === 'pcAnio') { const m = $('#pcMes').value.padStart(2, '0'), y = $('#pcAnio').value; FF.ui.mk = `${y}-${m}`; now(); return; }
     if (t.id === 'pMes' || t.id === 'pAnio') { st.pil = `${$('#pAnio').value}-${String($('#pMes').value).padStart(2, '0')}`; pending = false; return render(); }
     if (t.id === 'pTarifa') { const n = C.parseAmount(t.value); if (n != null && n >= 0) { FF.setConfig('tarifaHora', n); FF.toast('✓ Tarifa guardada'); } return; }
     if (t.dataset.pil != null) return pilotoEdit(t);
@@ -577,6 +580,7 @@
   pcMain.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     const id = e.target.id;
+    if (e.target.classList && e.target.classList.contains('cell') && (e.target.dataset.id || e.target.dataset.d || e.target.dataset.pil != null || e.target.dataset.sub != null)) { e.preventDefault(); e.target.blur(); return; }
     if (id === 'qImp' || id === 'qCon' || id === 'qFec') { e.preventDefault(); if (id === 'qImp' && !st.q.con) { $('#qCon').focus(); return; } quickSave(); }
     else if (id === 'nDet' || id === 'nImp') { e.preventDefault(); nuevaFila(); }
     else if (id === 'xDet' || id === 'xImp' || id === 'xHor' || id === 'xTar') { e.preventDefault(); nuevoExtra(); }
