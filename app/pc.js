@@ -162,24 +162,24 @@
     const totalSale = cr.tot.neto > 0 ? cr.tot.neto : 0;
     return head('📊 Centro de Mando', monthSelect()) + `
       <div class="pc-cards">
-        <div class="pc-card g"><div class="l">💵 ENTRA (sueldo + extras)</div><div class="v">${esc(fmt(m.entra))}</div><div class="s">Sueldo ${esc(fmt(m.sueldo))} + extras ${esc(fmt(m.extras))}</div></div>
-        <div class="pc-card o"><div class="l">💸 SALE (fijos + suscripciones + día a día)</div><div class="v">${esc(fmt(m.sale))}</div><div class="s">Fijos ${esc(fmt(m.fijos))} + día a día ${esc(fmt(m.dia))}</div></div>
-        <div class="pc-card b"><div class="l">🔥 ME QUEDA LIBRE</div><div class="v" style="${m.queda < 0 ? 'color:var(--bad)' : ''}">${esc(fmt(m.queda))}</div><div class="s">Lo que entra menos lo que sale</div></div>
+        <div class="pc-card g"><div class="l">💵 GANADO (sueldo + extras)</div><div class="v">${esc(fmt(m.entra))}</div><div class="s">Sueldo ${esc(fmt(m.sueldo))} + extras ${esc(fmt(m.extras))}</div></div>
+        <div class="pc-card o"><div class="l">💸 GASTADO (fijos + suscripciones + día a día)</div><div class="v">${esc(fmt(m.sale))}</div><div class="s">Fijos ${esc(fmt(m.fijos))} + día a día ${esc(fmt(m.dia))}</div></div>
+        <div class="pc-card b"><div class="l">🔥 ME QUEDA LIBRE</div><div class="v" style="${m.queda < 0 ? 'color:var(--bad)' : ''}">${esc(fmt(m.queda))}</div><div class="s">Lo ganado menos lo gastado</div></div>
       </div>
       ${semaforo(m)}
-      ${apartado > 0 ? `<div class="small" style="margin:-6px 2px 14px;color:var(--acc2)">💪 De lo que sale, <b>${esc(fmt(apartado))}</b> es inversión y ahorro: no se pierde, es tuyo${m.entra > 0 ? ` (${Math.round((apartado / m.entra) * 100)}% de lo que entra)` : ''}.</div>` : ''}
+      ${apartado > 0 ? `<div class="small" style="margin:-6px 2px 14px;color:var(--acc2)">💪 De lo gastado, <b>${esc(fmt(apartado))}</b> es inversión y ahorro: no se pierde, es tuyo${m.entra > 0 ? ` (${Math.round((apartado / m.entra) * 100)}% de lo ganado)` : ''}.</div>` : ''}
       ${quickBar()}
       <div class="pc-grid2">
-        <div class="card"><h2>1 · Lo que entra este mes</h2>
+        <div class="card"><h2>1 · Lo ganado este mes</h2>
           <table class="tbl"><thead><tr><th>Concepto</th><th class="r">Importe</th></tr></thead><tbody>
             <tr><td>💵 Mi sueldo del mes</td><td class="r">${esc(fmt(m.sueldo))}</td></tr>
             ${tipos.map((t) => `<tr><td>${esc(t)}</td><td class="r">${esc(fmt(ex[t] || 0))}</td></tr>`).join('')}
-            <tr class="tot"><td>💰 TOTAL QUE ENTRA</td><td class="r">${esc(fmt(m.entra))}</td></tr></tbody></table></div>
-        <div class="card"><h2>2 · Lo que sale este mes, por categorías</h2>
+            <tr class="tot"><td>💰 TOTAL GANADO</td><td class="r">${esc(fmt(m.entra))}</td></tr></tbody></table></div>
+        <div class="card"><h2>2 · Lo gastado este mes, por categorías</h2>
           <table class="tbl"><thead><tr><th>Categoría</th><th class="r">⚙️ Fijo</th><th class="r">📝 Día a día</th><th class="r">🔄 Devol.</th><th class="r">Gasto neto</th><th class="r">%</th></tr></thead><tbody>
             ${cr.all.map((r) => { const z = !r.fijo && !r.gasto && !r.dev; return `<tr class="${z ? 'zero' : ''}"><td>${esc(r.cat)}</td><td class="r">${esc(fmt(r.fijo))}</td><td class="r">${esc(fmt(r.gasto))}</td><td class="r">${esc(fmt(r.dev))}</td>
               <td class="r nb"><span class="nbar" style="width:${totalSale > 0 && r.neto > 0 ? Math.min(100, (r.neto / totalSale) * 100 * 1.6).toFixed(1) : 0}%"></span><b>${esc(fmt(r.neto))}</b></td><td class="r mut">${totalSale > 0 && r.neto > 0 ? Math.round((r.neto / totalSale) * 100) + '%' : ''}</td></tr>`; }).join('')}
-            <tr class="tot"><td>TOTAL QUE SALE</td><td class="r">${esc(fmt(cr.tot.fijo))}</td><td class="r">${esc(fmt(cr.tot.gasto))}</td><td class="r">${esc(fmt(cr.tot.dev))}</td><td class="r">${esc(fmt(cr.tot.neto))}</td><td></td></tr></tbody></table></div>
+            <tr class="tot"><td>TOTAL GASTADO</td><td class="r">${esc(fmt(cr.tot.fijo))}</td><td class="r">${esc(fmt(cr.tot.gasto))}</td><td class="r">${esc(fmt(cr.tot.dev))}</td><td class="r">${esc(fmt(cr.tot.neto))}</td><td></td></tr></tbody></table></div>
       </div>`;
   }
 
@@ -261,9 +261,9 @@
     const ms = meses.map((mk) => C.computeMonth(data(), mk));
     const apart = (m) => m.filas.filter((f) => /inversi|colch/i.test(f.cat)).reduce((a, f) => a + f.total, 0);
     const filas = [
-      ['💵 Mi sueldo', (m) => m.sueldo, ''], ['🚀 Dinero extra', (m) => m.extras, ''], ['💰 TOTAL QUE ENTRA', (m) => m.entra, 'tot g'],
+      ['💵 Mi sueldo', (m) => m.sueldo, ''], ['🚀 Dinero extra', (m) => m.extras, ''], ['💰 TOTAL GANADO', (m) => m.entra, 'tot g'],
       ['⚙️ Gastos fijos', (m) => m.fijos - m.subs, ''], ['🎮 Suscripciones', (m) => m.subs, ''], ['📝 Día a día (menos devoluciones)', (m) => m.dia, ''],
-      ['💸 TOTAL QUE SALE', (m) => m.sale, 'tot o'], ['🔥 ME QUEDA LIBRE', (m) => m.queda, 'tot b'], ['💪 Apartado (inversión + ahorro)', apart, 'ap'],
+      ['💸 TOTAL GASTADO', (m) => m.sale, 'tot o'], ['🔥 ME QUEDA LIBRE', (m) => m.queda, 'tot b'], ['💪 Apartado (inversión + ahorro)', apart, 'ap'],
     ];
     const celda = (v, mk, neg) => `<td class="r ${mk > hoyMk ? 'fut' : ''}" ${neg && v < 0 ? 'style="color:var(--bad);font-weight:700"' : ''}>${v === 0 ? '<span class="mut">–</span>' : esc(fmt(v))}</td>`;
     const totalAnio = ms.reduce((a, m) => a + m.sale, 0);
@@ -289,7 +289,7 @@
       return `<tr class="${tot === 0 ? 'zero' : ''}"><td>${esc(n)}</td>${vals.map((v, i) => celda(C.r2(v), meses[i], false)).join('')}<td class="r"><b>${esc(fmt(tot))}</b></td><td class="r mut">${totalAnio > 0 && tot > 0 ? Math.round((tot / totalAnio) * 100) + '%' : ''}</td></tr>`;
     }).join('');
   })()}
-        <tr class="tot"><td>TOTAL QUE SALE</td>${ms.map((m, i) => celda(m.sale, meses[i], false)).join('')}<td class="r">${esc(fmt(C.r2(totalAnio)))}</td><td></td></tr></tbody></table></div>`;
+        <tr class="tot"><td>TOTAL GASTADO</td>${ms.map((m, i) => celda(m.sale, meses[i], false)).join('')}<td class="r">${esc(fmt(C.r2(totalAnio)))}</td><td></td></tr></tbody></table></div>`;
   }
 
   /* ------------------------------------------------------------------ 🔄 DEVOLUCIONES (misma tabla que Gastos, solo devoluciones) */
@@ -306,7 +306,7 @@
     return head('🏦 Mis Ahorros', monthSelect()) + `
       <div class="pc-cards">
         <div class="pc-card g"><div class="l">🏦 MIS AHORROS (a final de ${esc(C.MESES[M - 1].toLowerCase())})</div><div class="v">${esc(fmt(ser.actual))}</div><div class="s">Se actualiza solo con lo que ahorras cada mes</div></div>
-        <div class="pc-card b"><div class="l">📈 AHORRADO EN EL AÑO (hasta ese mes)</div><div class="v">${esc(fmt(ser.enAnio))}</div><div class="s">Entra − sale + lo apartado (inversión + colchón)</div></div>
+        <div class="pc-card b"><div class="l">📈 AHORRADO EN EL AÑO (hasta ese mes)</div><div class="v">${esc(fmt(ser.enAnio))}</div><div class="s">Ganado − gastado + lo apartado (inversión + colchón)</div></div>
         <div class="pc-card o"><div class="l">🧮 AHORRADO DESDE QUE EMPECÉ</div><div class="v">${esc(fmt(ser.desdeInicio))}</div><div class="s">Sin contar lo que ya tenías</div></div>
       </div>
       <div class="card"><h2>✍️ Solo 2 casillas</h2>
@@ -317,7 +317,7 @@
           <div class="pc-btns"><button class="btn pri" id="aSave" type="button">💾 Guardar</button></div>
         </div>
         <p class="small mut" style="margin:10px 0 0">${a.desde ? '' : '⚠️ Aún no has puesto desde cuándo cuentas: sin eso no se calcula nada. '}Al cambiar de año los ahorros siguen: el 1 de enero empiezas con lo que tenías a 31 de diciembre.</p></div>
-      <div class="card" style="padding:0;overflow:auto"><table class="tbl yr"><thead><tr><th>${Y}</th><th class="r">💵 Entra</th><th class="r">💸 Sale</th><th class="r">💪 Apartado</th><th class="r">💰 Ahorrado en el mes</th><th class="r">🏦 Ahorros a final de mes</th></tr></thead><tbody>
+      <div class="card" style="padding:0;overflow:auto"><table class="tbl yr"><thead><tr><th>${Y}</th><th class="r">💵 Ganado</th><th class="r">💸 Gastado</th><th class="r">💪 Apartado</th><th class="r">💰 Ahorrado en el mes</th><th class="r">🏦 Ahorros a final de mes</th></tr></thead><tbody>
         ${meses.map((mk, i) => { const f = por[mk]; return `<tr><td>${esc(C.MESES[i])}</td>${cell(f ? f.entra : null, mk)}${cell(f ? f.sale : null, mk)}${cell(f ? f.apartado : null, mk)}${cell(f ? f.ahorrado : null, mk)}${cell(f ? f.acumulado : null, mk)}</tr>`; }).join('')}
       </tbody></table></div>`;
   }
