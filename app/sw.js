@@ -1,6 +1,6 @@
 /* Service worker: la app abre al instante y sin cobertura. Nunca intercepta la hoja de Google ni la API de Gemini. */
-const CACHE = 'finanzas-v11';
-const SHELL = ['./', './index.html', './core.js', './app.js', './pc.js', './more.js', './onboard.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
+const CACHE = 'finanzas-v13';
+const SHELL = ['./', './index.html', './core.js', './app.js', './pc.js', './more.js', './onboard.js', './cartera.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));

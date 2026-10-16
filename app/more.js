@@ -49,12 +49,12 @@
   /* ------------------------------------------------------------------ 📈 GRÁFICOS */
   const PALETA = ['#22d3ee', '#818cf8', '#fb923c', '#f472b6', '#a3e635', '#fbbf24', '#38bdf8', '#94a3b8'];
 
-  function donut(items, total) {
+  function donut(items, total, etiqueta = 'GASTADO') {
     const R = 70, L = 2 * Math.PI * R;
     let off = 0;
     const seg = items.map((it, i) => { const len = total > 0 ? (it.v / total) * L : 0; const s = `<circle r="${R}" cx="100" cy="100" fill="none" stroke="${PALETA[i % PALETA.length]}" stroke-width="30" stroke-dasharray="${len.toFixed(2)} ${(L - len).toFixed(2)}" stroke-dashoffset="${(-off).toFixed(2)}" transform="rotate(-90 100 100)"><title>${esc(it.n)}: ${esc(fmt(it.v))}</title></circle>`; off += len; return s; }).join('');
     return `<svg viewBox="0 0 200 200" class="gdonut" role="img" aria-label="Reparto del gasto por categoría"><circle r="${R}" cx="100" cy="100" fill="none" stroke="#ffffff10" stroke-width="30"/>${seg}
-      <text x="100" y="96" text-anchor="middle" fill="#8f9cd0" font-size="10">GASTADO</text><text x="100" y="116" text-anchor="middle" fill="#fff" font-size="17" font-weight="800">${esc(fmt(total))}</text></svg>`;
+      <text x="100" y="96" text-anchor="middle" fill="#8f9cd0" font-size="10">${esc(etiqueta)}</text><text x="100" y="116" text-anchor="middle" fill="#fff" font-size="17" font-weight="800">${esc(fmt(total))}</text></svg>`;
   }
 
   function bars(serie) {
@@ -90,6 +90,7 @@
   }
 
   FF.views = { guia: guiaView, graficos: graficosView };
+  FF.charts = { donut, PALETA };
 
   pcMain.addEventListener('click', (e) => {
     const g = e.target.closest('[data-g]');

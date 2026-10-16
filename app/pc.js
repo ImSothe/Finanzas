@@ -68,6 +68,7 @@
 
   /** Redibuja ya (tras guardar/borrar), aunque el cursor siga en un campo: así lo añadido se ve al instante. */
   function now() { pending = false; force = true; try { FF.renderAll(); } finally { force = false; } }
+  FF.renderNow = now;
 
   const MAP = { home: 'cmd', hist: 'gastos', res: 'anio', set: 'ajustes' };
   FF.pcGo = (v) => { view = MAP[v] || v; apply(); window.scrollTo(0, 0); };

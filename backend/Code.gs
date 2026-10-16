@@ -241,7 +241,7 @@ function xlReadExtras_() {
 }
 
 /* Configuración: se LEE de tu pestaña Piloto (valores ya calculados: la herencia mes a mes la hace la propia hoja). */
-var XL_EXTRA_KEYS = ['deudas', 'ahorros', 'tarifaHora'];
+var XL_EXTRA_KEYS = ['deudas', 'ahorros', 'tarifaHora', 'metas', 'subsModo', 'cartera'];
 
 function xlReadConfig_() {
   var sh = xlSheet_(XL.piloto);
