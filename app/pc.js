@@ -79,7 +79,7 @@
   const semaforo = (m) => {
     const col = { verde: 'var(--acc)', amarillo: 'var(--warn)', rojo: 'var(--bad)', vacio: 'var(--line)' }[m.semaforo];
     const msg = C.semaforoMsg(m);
-    const w = m.semaforo === 'vacio' ? 0 : Math.max(2, Math.min(100, m.pctLibre * 100));
+    const w = m.semaforo === 'vacio' ? 0 : Math.max(2, Math.min(100, m.pctGastado * 100));
     return `<div class="pc-bat"><div class="pc-batbar"><i style="width:${w.toFixed(1)}%;background:${col}"></i></div><div class="pc-batmsg" style="color:${m.semaforo === 'vacio' ? 'var(--mut)' : col}">${esc(msg)}</div></div>`;
   };
 
