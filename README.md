@@ -1,0 +1,109 @@
+# Finanzas
+
+App web (PWA) para llevar tus gastos sin pereza, conectada a **Google Sheets**:
+
+- **Gasto pequeño en 3 segundos** (un café): importe, concepto, y la categoría se elige sola según tu diccionario de costumbres.
+- **Rayos X de tickets**: haces foto a un ticket grande (una compra de 170 €) y la IA (Gemini) lo desglosa **artículo por artículo**, te enseña de qué categoría sale cada euro y lo guarda dividido por categorías o en una sola fila con el detalle.
+- **"Cuánto me queda este mes"** siempre arriba, con la misma fórmula que el Excel de origen (sueldo + extras − fijos − suscripciones − gastos del día a día + devoluciones).
+- Funciona **sin conexión** (cola de envío) y se instala en la pantalla de inicio como una app.
+
+```
+┌───────────────┐  fetch   ┌──────────────────────┐   lee/escribe   ┌───────────────┐
+│  PWA (móvil)  │ ───────► │ Google Apps Script   │ ──────────────► │ Google Sheets │
+│  app/         │ ◄─────── │ backend/Code.gs      │ ◄────────────── │ (tu base)     │
+└──────┬────────┘   JSON   └──────────────────────┘                 └───────────────┘
+       │ foto del ticket (JPEG comprimido, directo)
+       ▼
+  Gemini API (gemini-2.5-flash)
+```
+
+## Qué hay en el repositorio
+
+| Ruta | Para qué |
+|---|---|
+| `app/` | La web app (HTML + JS sin build): `index.html`, `app.js` (interfaz), `core.js` (lógica pura), `sw.js`, `manifest.webmanifest`, `icons/`, `vendor/xlsx.full.min.js` (SheetJS) |
+| `backend/Code.gs` | Backend **genérico** para pegar en Google Apps Script |
+| `tools/build_seed.py` | Lee **tu** Excel de finanzas y extrae categorías, sueldo, fijos, suscripciones y diccionario de costumbres → `seed/` (no se sube a git) |
+| `tools/build_gs.py` | Genera `dist/Code.gs`: el mismo backend **con tus datos de arranque** dentro (no se sube a git) |
+| `tools/dev_server.js` | Servidor de pruebas local: sirve la app, ejecuta el `Code.gs` real sobre una hoja simulada y simula a Gemini |
+| `tests/` | Pruebas automáticas (`npm test`) |
+
+## Puesta en marcha (≈ 10 minutos)
+
+### 1. Preparar tu `Code.gs` personal
+```bash
+pip install openpyxl
+python tools/build_seed.py "C:/ruta/tu_excel_de_finanzas.xlsx"   # -> seed/seed.json (categorías, sueldo, diccionario…)
+python tools/build_gs.py                                         # -> dist/Code.gs  (listo para pegar)
+```
+Si no quieres partir de un Excel, usa `backend/Code.gs` (genérico): las pestañas se crean vacías y editas la pestaña **Config** de la hoja.
+
+### 2. Crear la base en Google Sheets
+1. Crea una **hoja de cálculo de Google** nueva (sheets.new).
+2. **Extensiones → Apps Script**. Borra lo que haya y pega el contenido de `dist/Code.gs`. Guarda.
+3. Recarga la hoja: aparece el menú **💰 Finanzas App**. Pulsa **1. Configurar**. Google pedirá permisos la primera vez (*"app no verificada" → Configuración avanzada → Ir a…*; es tu propio script).
+4. Te muestra un **TOKEN**. Cópialo.
+5. **Implementar → Nueva implementación → Aplicación web**: *Ejecutar como*: **Yo**; *Quién tiene acceso*: **Cualquier usuario**. Copia la URL que termina en `/exec`.
+
+> Cada vez que cambies `Code.gs` hay que volver a implementar (*Administrar implementaciones → Editar → Versión nueva*).
+
+### 3. Publicar la app (necesita HTTPS: la cámara y la instalación no funcionan sin él)
+Sube la carpeta `app/` a cualquier hosting estático gratuito: **Netlify** (arrastra la carpeta en *app.netlify.com/drop*), **Cloudflare Pages**, o **GitHub Pages** (en cuentas gratuitas exige repositorio público; la app no contiene tus datos: se leen de tu hoja).
+
+### 4. Conectar y usar
+1. Abre la URL en el móvil → **Ajustes**: pega la **URL `/exec`** y el **token** → *Probar*.
+2. (Opcional, escáner) pega tu **API key de Gemini** ([Google AI Studio](https://aistudio.google.com/apikey)). El modelo por defecto es `gemini-2.5-flash`.
+3. (Opcional) **Ajustes → Importar .xlsx** y elige tu Excel: trae tu historial (no duplica si lo repites).
+4. **Instalar**: Android/Chrome → menú ⋮ → *Instalar app*. iPhone/Safari → Compartir → *Añadir a pantalla de inicio*.
+
+## Cómo se usa
+
+- **➕ Hoy**: escribe el importe → concepto → Guardar. Al escribir `caf`, `figu`, `moto`… sugiere y **elige la categoría solo** (marca *auto ✨*; pulsa para cambiarla). Si le corriges una categoría, **lo aprende** y lo guarda en la hoja (pestaña *Diccionario*).
+- **Tus habituales**: botones de 1 toque con tus conceptos más repetidos (con su último importe como referencia).
+- **📷 Escanear ticket**: foto → *Rayos X* con el total por categoría y la lista de artículos (toca la categoría de cualquiera para cambiarla). Guardas con:
+  - **✂️ Dividir por categorías**: una fila por categoría (la última absorbe el redondeo: la suma es exactamente el total), con el detalle en la columna `Detalle_Items`.
+  - **📎 Una sola fila con detalle**: el total en una fila y el desglose completo guardado dentro.
+  - Si los artículos no suman el total del ticket, añade una línea de **ajuste** (descuentos/redondeo) y te lo avisa.
+- **🧾 Historial**: buscador que mira concepto, categoría, comercio **y los artículos de dentro de los tickets** ("queso", "figurita"). Tocar un gasto de ticket abre el ticket desglosado.
+- **📊 Resumen**: cifras del mes y barra por categoría (con presupuesto si pones uno en `Config`).
+- **⚙️ Ajustes**: conexión, Gemini, importar/exportar Excel (la exportación trae primero las 5 columnas de tu Excel), diccionario.
+
+## La hoja de Google (modelo de datos)
+
+| Pestaña | Columnas / contenido |
+|---|---|
+| `Gastos` | Fecha · Categoría · Importe · Tipo (`Gasto`/`Devolución 🔄`) · Detalle · Comercio · **Detalle_Items** (JSON del desglose) · TicketID · Origen · ID · Creado |
+| `Extras` | Fecha · Tipo de extra · Importe · Detalle · ID · Creado |
+| `Config` | `categorias`, `sueldo` (serie *desde mes → importe*), `fijos`, `suscripciones`, `tiposExtra`, `ahorro` … (JSON editable) |
+| `Diccionario` | palabra → categoría · veces · origen (`historial` / `app` / `semilla`) |
+
+Puedes editar la hoja a mano (las filas sin ID reciben uno solas). El sueldo y los fijos **se heredan hacia delante** como en el Excel: una entrada `{"desde":"2026-10","importe":1500}` vale hasta que pongas otra posterior.
+
+## Seguridad y privacidad (léelo)
+
+- La URL de Apps Script es pública, pero **toda operación exige el token** (secreto). Si se filtra: menú *💰 Finanzas App → Regenerar el token*.
+- La **API key de Gemini y el token se guardan solo en el navegador** del dispositivo. La foto va **directamente a Google** (Gemini), comprimida; no pasa por ningún servidor tuyo ni mío. Limita la clave en Google AI Studio si puedes.
+- El contenido de los tickets se trata como **datos, no como instrucciones** (el prompt lo indica) y todo lo que viene de la hoja o de la IA se **escapa** antes de pintarse (probado con cargas maliciosas).
+- Es una app personal pensada para **una sola persona/hoja**; no hay usuarios ni permisos.
+
+## Qué se ha probado y qué NO
+
+Probado automáticamente (`npm test`, 41 pruebas) y en un navegador de escritorio emulando un móvil, contra un servidor local que ejecuta el `Code.gs` real:
+alta/edición/borrado, idempotencia de reintentos, cola sin conexión y reenvío, arranque sin red, autocompletado y aprendizaje, ticket dividido y en una fila (suma exacta), búsqueda dentro de tickets, importación del Excel real (sin duplicar al repetir), exportación, errores de Gemini (clave mala, límite, respuesta inválida), escape de HTML, y que el cálculo de *cuánto me queda* coincide con el Excel.
+
+**No probado todavía** (hay que verlo en tu móvil y con tus cuentas):
+- El despliegue real en **Google Apps Script** (permisos, CORS desde otro dominio, redirecciones de `script.google.com`).
+- **Gemini real con fotos de tickets reales**: la precisión de la lectura depende de la foto. Solo se comprobó que la petición llega a Google con el formato correcto; el servidor de pruebas simula la respuesta.
+- Instalación en **iPhone/Android** y comportamiento de la cámara en cada navegador.
+- Rendimiento con miles de filas.
+
+## Desarrollo
+
+```bash
+npm test                 # pruebas (backend con hoja simulada + núcleo)
+npm run dev              # http://127.0.0.1:8777 con hoja y Gemini simulados (token en la consola)
+```
+`app/core.js` no toca el DOM: toda la lógica de negocio (cálculo del mes, diccionario, tickets, búsqueda) está ahí y es la que prueban los tests.
+
+## Licencia
+Uso personal. Incluye [SheetJS](https://sheetjs.com) (Apache-2.0) en `app/vendor/`.

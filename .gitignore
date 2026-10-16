@@ -1,0 +1,7 @@
+seed/
+dist/
+*.xlsx
+node_modules/
+__pycache__/
+.env
+*.log

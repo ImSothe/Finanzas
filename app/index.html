@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Finanzas</title>
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, user-scalable=no">
+<meta name="theme-color" content="#0b1020">
+<meta name="color-scheme" content="dark">
+<meta name="description" content="Tus gastos en 3 segundos, conectados a tu hoja de Google.">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" type="image/png" href="icons/icon-192.png">
+<!-- iOS: añadir a pantalla de inicio -->
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Finanzas">
+<style>
+:root{--bg:#0b1020;--card:#141b34;--card2:#1b2447;--line:#27325c;--txt:#e8ecff;--mut:#8b97c7;--acc:#10b981;--acc2:#34d399;--warn:#fbbf24;--bad:#ef4444;--blue:#60a5fa;
+  --r:16px;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--txt);font:16px/1.35 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;overscroll-behavior-y:contain}
+body{min-height:100dvh;padding-bottom:calc(76px + var(--safe-b))}
+button,input,select,textarea{font:inherit;color:inherit}
+button{background:none;border:0;cursor:pointer}
+[hidden]{display:none!important}
+header#top{position:sticky;top:0;z-index:20;background:linear-gradient(#0b1020 85%,#0b1020ee);padding:calc(10px + var(--safe-t)) 16px 8px;border-bottom:1px solid var(--line)}
+.row{display:flex;align-items:center;gap:8px}
+.grow{flex:1}
+#mLabel{font-weight:600;text-align:center;min-width:150px}
+.nav-btn{width:40px;height:40px;border-radius:12px;background:var(--card);font-size:20px}
+.chip{font-size:12px;padding:4px 10px;border-radius:999px;background:var(--card);color:var(--mut);white-space:nowrap}
+.chip.ok{color:var(--acc2)}.chip.warn{color:var(--warn)}.chip.bad{color:var(--bad)}
+.hero{text-align:center;margin:2px 0 6px}
+.hero .lbl{color:var(--mut);font-size:13px}
+.big{font-size:40px;font-weight:800;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+.big.neg{color:var(--bad)}
+.battery{height:12px;background:var(--card);border-radius:999px;overflow:hidden;border:1px solid var(--line)}
+#batFill{height:100%;width:0;border-radius:999px;background:var(--acc);transition:width .4s,background .3s}
+#batMsg{text-align:center;font-size:13px;margin-top:5px;font-weight:600}
+main{padding:14px 16px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--r);padding:14px;margin-bottom:14px}
+h2{font-size:15px;margin:0 0 10px;color:var(--mut);font-weight:600;text-transform:uppercase;letter-spacing:.6px}
+label.f{display:block;font-size:12px;color:var(--mut);margin:0 0 4px}
+input.t,select.t,textarea.t{width:100%;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:13px 14px;font-size:16px;outline:none}
+input.t:focus,select.t:focus{border-color:var(--acc)}
+#amt{font-size:30px;font-weight:700;text-align:right;font-variant-numeric:tabular-nums}
+.sug{display:flex;flex-direction:column;gap:6px;margin-top:8px}
+.sug button{display:flex;justify-content:space-between;gap:8px;align-items:center;text-align:left;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:10px 12px}
+.sug small{color:var(--mut)}
+.catbtn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:10px;background:var(--card2);border:1px solid var(--line);border-radius:12px;padding:12px 14px;min-height:50px;text-align:left}
+.catbtn.need{border-color:var(--warn);box-shadow:0 0 0 2px #fbbf2433}
+.badge{font-size:11px;background:#10b98133;color:var(--acc2);padding:2px 8px;border-radius:999px}
+.seg{display:flex;background:var(--card2);border-radius:12px;padding:3px;border:1px solid var(--line)}
+.seg button{flex:1;padding:9px 4px;border-radius:9px;font-size:13px;color:var(--mut);white-space:nowrap}
+.seg button.on{background:var(--acc);color:#04241a;font-weight:700}
+.btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border-radius:14px;padding:16px;font-weight:700;font-size:18px;min-height:56px}
+.btn.pri{background:var(--acc);color:#04241a}
+.btn.cam{background:linear-gradient(135deg,#6366f1,#8b5cf6);color:#fff}
+.btn.sec{background:var(--card2);border:1px solid var(--line)}
+.btn.bad{background:#7f1d1d;color:#fecaca}
+.btn:active{transform:scale(.98)}
+.btn[disabled]{opacity:.5}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chips button{background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:10px 14px;font-size:15px}
+.chips button small{color:var(--mut);margin-left:4px}
+.item{display:flex;justify-content:space-between;gap:10px;padding:12px 0;border-bottom:1px solid var(--line);align-items:center}
+.item:last-child{border-bottom:0}
+.item .l{min-width:0}
+.item .t{font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.item .s{font-size:12px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.amt{font-variant-numeric:tabular-nums;font-weight:700;white-space:nowrap}
+.amt.dev{color:var(--acc2)}
+.day{font-size:12px;color:var(--mut);margin:14px 0 2px;text-transform:uppercase;letter-spacing:.5px}
+.bar{height:8px;background:var(--card2);border-radius:99px;overflow:hidden;margin-top:6px}
+.bar>i{display:block;height:100%;background:var(--blue);border-radius:99px}
+.bar.over>i{background:var(--bad)}
+.kv{display:flex;justify-content:space-between;padding:6px 0}
+.kv.tot{border-top:1px solid var(--line);margin-top:4px;padding-top:10px;font-weight:800}
+.mut{color:var(--mut)}.small{font-size:12px}.center{text-align:center}
+nav#tabs{position:fixed;left:0;right:0;bottom:0;z-index:30;display:flex;background:#0e1530f2;backdrop-filter:blur(10px);border-top:1px solid var(--line);padding:6px 6px calc(6px + var(--safe-b))}
+nav#tabs button{flex:1;display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 0;color:var(--mut);font-size:11px;border-radius:12px;min-height:52px}
+nav#tabs button span{font-size:22px;line-height:1}
+nav#tabs button.on{color:var(--acc2);background:#10b98114}
+#overlay{position:fixed;inset:0;z-index:50;display:none}
+#overlay.on{display:block}
+#overlay .bk{position:absolute;inset:0;background:#000a}
+.sheet{position:absolute;left:0;right:0;bottom:0;max-height:92dvh;overflow:auto;background:var(--card);border-radius:22px 22px 0 0;border:1px solid var(--line);padding:16px 16px calc(18px + var(--safe-b));animation:up .2s ease-out}
+.sheet.full{top:calc(14px + var(--safe-t));max-height:none}
+@keyframes up{from{transform:translateY(40px);opacity:.4}to{transform:none;opacity:1}}
+.sheet h3{margin:0 0 4px;font-size:18px}
+.grab{width:42px;height:4px;background:var(--line);border-radius:9px;margin:0 auto 12px}
+.pick button{display:flex;width:100%;text-align:left;padding:14px 10px;border-bottom:1px solid var(--line);gap:8px;align-items:center;min-height:50px}
+.pick button.on{color:var(--acc2);font-weight:700}
+#toast{position:fixed;left:12px;right:12px;bottom:calc(86px + var(--safe-b));z-index:70;display:flex;justify-content:center;pointer-events:none}
+#toast div{pointer-events:auto;background:#1e293b;border:1px solid var(--line);border-radius:14px;padding:12px 16px;box-shadow:0 8px 30px #0008;display:flex;gap:14px;align-items:center;max-width:520px}
+#toast b{color:var(--acc2)}
+#toast button{color:var(--blue);font-weight:700}
+.spinner{width:46px;height:46px;border:4px solid var(--line);border-top-color:var(--acc);border-radius:50%;animation:sp 1s linear infinite;margin:0 auto 14px}
+@keyframes sp{to{transform:rotate(360deg)}}
+.warnbox{background:#78350f55;border:1px solid #b45309;color:#fde68a;border-radius:12px;padding:10px 12px;font-size:13px;margin:10px 0}
+.shake{animation:sh .3s}
+@keyframes sh{25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.tk-line{display:flex;gap:8px;align-items:center;padding:9px 0;border-bottom:1px solid var(--line)}
+.tk-line .n{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis}
+.tk-line .c{font-size:12px;background:var(--card2);border:1px solid var(--line);border-radius:999px;padding:5px 10px;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+mark{background:#fbbf2433;color:#fde68a;border-radius:4px;padding:0 2px}
+.empty{padding:26px 10px;text-align:center;color:var(--mut)}
+details summary{cursor:pointer;color:var(--mut);padding:8px 0}
+@media (min-width:700px){main,header#top>*{max-width:560px;margin-left:auto;margin-right:auto}}
+</style>
+</head>
+<body>
+<header id="top">
+  <div class="row">
+    <button class="nav-btn" id="mPrev" aria-label="Mes anterior">‹</button>
+    <div class="grow" id="mLabel">…</div>
+    <button class="nav-btn" id="mNext" aria-label="Mes siguiente">›</button>
+    <span class="chip" id="sync" role="status">…</span>
+  </div>
+  <div class="hero">
+    <div class="lbl" id="qLbl">Te quedan este mes</div>
+    <div class="big" id="queda">–</div>
+  </div>
+  <div class="battery"><div id="batFill"></div></div>
+  <div id="batMsg"></div>
+</header>
+
+<main>
+  <!-- ============ HOY: entrada rápida ============ -->
+  <section id="v-home">
+    <div id="onboard" class="card" hidden>
+      <h2>Primer paso</h2>
+      <p style="margin:0 0 12px">Conecta tu hoja de Google para empezar: pega la URL y el token que te dio el script.</p>
+      <button class="btn pri" data-go="set">⚙️ Abrir ajustes</button>
+    </div>
+
+    <div class="card">
+      <label class="f" for="amt">Importe</label>
+      <input id="amt" class="t" inputmode="decimal" autocomplete="off" placeholder="0,00" enterkeyhint="next">
+      <label class="f" for="con" style="margin-top:10px">Concepto <span class="mut">(opcional)</span></label>
+      <input id="con" class="t" autocomplete="off" autocapitalize="sentences" placeholder="café, gasolina, figurita…" enterkeyhint="done">
+      <div class="sug" id="sug"></div>
+
+      <div class="f" style="margin-top:10px;font-size:12px;color:var(--mut)" id="catLbl">Categoría</div>
+      <button class="catbtn" id="catBtn" type="button"><span id="catTxt" class="mut">Elige categoría</span><span id="catBadge"></span></button>
+
+      <div class="grid2" style="margin-top:10px">
+        <div class="seg" id="tipoSeg" role="tablist">
+          <button data-t="Gasto" class="on">Gasto</button><button data-t="Devolución 🔄">↩ Devuelto</button><button data-t="extra">＋ Extra</button>
+        </div>
+        <button class="catbtn" id="dateBtn" type="button" style="min-height:44px"><span id="dateTxt">Hoy</span><span>📅</span></button>
+      </div>
+      <input type="date" id="dateIn" style="position:absolute;opacity:0;pointer-events:none;width:1px;height:1px" tabindex="-1" aria-hidden="true">
+
+      <button class="btn pri" id="saveBtn" style="margin-top:14px">💾 Guardar</button>
+    </div>
+
+    <button class="btn cam" id="camBtn" style="margin-bottom:14px">📷 Escanear ticket con IA</button>
+    <input type="file" id="camIn" accept="image/*" capture="environment" hidden>
+
+    <div class="card" id="chipsCard" hidden>
+      <h2>Tus habituales</h2>
+      <div class="chips" id="chips"></div>
+    </div>
+
+    <div class="card">
+      <h2>Últimos</h2>
+      <div id="recent"></div>
+    </div>
+  </section>
+
+  <!-- ============ HISTORIAL ============ -->
+  <section id="v-hist" hidden>
+    <input id="q" class="t" type="search" placeholder="🔎 Buscar: queso, figurita, Mercadona…" autocomplete="off" style="margin-bottom:12px">
+    <div id="hist"></div>
+  </section>
+
+  <!-- ============ RESUMEN ============ -->
+  <section id="v-res" hidden>
+    <div class="card" id="resTot"></div>
+    <div class="card"><h2>Por categoría</h2><div id="resCats"></div></div>
+  </section>
+
+  <!-- ============ AJUSTES ============ -->
+  <section id="v-set" hidden>
+    <div class="card">
+      <h2>Conexión con tu hoja de Google</h2>
+      <label class="f" for="sUrl">URL de la aplicación web (termina en /exec)</label>
+      <input id="sUrl" class="t" inputmode="url" autocomplete="off" placeholder="https://script.google.com/macros/s/…/exec">
+      <label class="f" for="sTok" style="margin-top:10px">Token</label>
+      <input id="sTok" class="t" type="password" autocomplete="off" placeholder="el que te enseñó el script">
+      <div class="grid2" style="margin-top:12px"><button class="btn sec" id="sTest">🔌 Probar</button><button class="btn sec" id="sSync">🔄 Sincronizar</button></div>
+      <div id="sMsg" class="small mut" style="margin-top:8px"></div>
+    </div>
+    <div class="card">
+      <h2>Escáner de tickets (Gemini)</h2>
+      <label class="f" for="sKey">API key de Google AI Studio</label>
+      <input id="sKey" class="t" type="password" autocomplete="off" placeholder="AIza…">
+      <label class="f" for="sMod" style="margin-top:10px">Modelo</label>
+      <input id="sMod" class="t" autocomplete="off" placeholder="gemini-2.5-flash">
+      <details><summary>Avanzado</summary>
+        <label class="f" for="sBase">Servidor de la API</label>
+        <input id="sBase" class="t" autocomplete="off" placeholder="https://generativelanguage.googleapis.com">
+      </details>
+      <p class="small mut" style="margin:10px 0 0">La clave se guarda solo en este dispositivo. Las fotos van directas a Google (Gemini), no a ningún otro servidor.</p>
+    </div>
+    <div class="card">
+      <h2>Excel</h2>
+      <div class="grid2"><button class="btn sec" id="xExp">⬇️ Exportar .xlsx</button><button class="btn sec" id="xImp">⬆️ Importar .xlsx</button></div>
+      <input type="file" id="xIn" accept=".xlsx,.xls,.csv" hidden>
+      <p class="small mut" style="margin:10px 0 0">Importar acepta tu hoja "📝 Gastos" del Excel (no duplica si lo repites). La exportación trae primero las 5 columnas de tu Excel (Fecha, Categoría, Importe, Tipo, Detalle).</p>
+    </div>
+    <div class="card">
+      <h2>Diccionario de costumbres</h2>
+      <input id="dq" class="t" type="search" placeholder="Filtrar…" autocomplete="off" style="margin-bottom:8px">
+      <div id="dictList" style="max-height:320px;overflow:auto"></div>
+    </div>
+    <div class="card">
+      <button class="btn sec" id="sClear">🧹 Borrar datos locales (no toca la hoja)</button>
+      <p class="small mut center" id="ver" style="margin:10px 0 0"></p>
+    </div>
+  </section>
+</main>
+
+<nav id="tabs">
+  <button data-go="home" class="on"><span>➕</span>Hoy</button>
+  <button data-go="hist"><span>🧾</span>Historial</button>
+  <button data-go="res"><span>📊</span>Resumen</button>
+  <button data-go="set"><span>⚙️</span>Ajustes</button>
+</nav>
+<div id="overlay"><div class="bk"></div></div>
+<div id="toast"></div>
+
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
