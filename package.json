@@ -9,5 +9,5 @@
     "build:seed": "python tools/build_seed.py",
     "build:gs": "python tools/build_gs.py"
   },
-  "license": "UNLICENSED"
+  "license": "MIT"
 }

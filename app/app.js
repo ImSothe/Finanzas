@@ -362,6 +362,45 @@
     } catch (e) { msg.textContent = '❌ No se pudo conectar. ¿Está la implementación como "Cualquier usuario"? ¿Tienes conexión?'; }
   }
 
+  /* ================================================================== enlace de configuración para otro móvil
+     Formato: #c=<base64(JSON {u: url, t: token})>. El hash no viaja a ningún servidor. Solo se aceptan servidores de
+     Google Apps Script (o local, para pruebas) y siempre con confirmación, para que un enlace ajeno no pueda desviar tus datos. */
+  const b64enc = (s) => btoa(String.fromCharCode(...new TextEncoder().encode(s)));
+  const b64dec = (b) => new TextDecoder().decode(Uint8Array.from(atob(b), (c) => c.charCodeAt(0)));
+  const hostOk = (u) => {
+    try {
+      const x = new URL(u);
+      if (x.protocol === 'https:') return x.hostname === 'script.google.com' || x.hostname === 'script.googleusercontent.com';
+      return x.protocol === 'http:' && (x.hostname === '127.0.0.1' || x.hostname === 'localhost');
+    } catch (e) { return false; }
+  };
+
+  function shareLink() {
+    if (!configured()) { toast('Configura primero la conexión'); return; }
+    const link = location.origin + location.pathname + '#c=' + b64enc(JSON.stringify({ u: cfg.url, t: cfg.token }));
+    const sh = openSheet(`<h3>Enlace de configuración</h3>
+      <p class="small mut">Ábrelo en el otro móvil y quedará conectado sin escribir nada. Contiene tu token: envíatelo solo a ti (una nota o un mensaje a ti mismo) y no lo compartas.</p>
+      <textarea class="t" id="lnk" rows="4" readonly>${esc(link)}</textarea>
+      <div class="grid2" style="margin-top:12px"><button class="btn sec" id="lnkX">Cerrar</button><button class="btn pri" id="lnkC">📋 Copiar</button></div>`);
+    $('#lnkX', sh.el).onclick = () => sh.close();
+    $('#lnkC', sh.el).onclick = async () => {
+      try { await navigator.clipboard.writeText(link); toast('📋 Enlace copiado'); } catch (e) { $('#lnk', sh.el).select(); toast('Selecciona el texto y cópialo'); }
+    };
+  }
+
+  function applyHashConfig() {
+    const m = location.hash.match(/^#c=([A-Za-z0-9+/=]+)$/);
+    if (!m) return;
+    history.replaceState(null, '', location.pathname + location.search);       // quita el token de la barra de direcciones
+    let o;
+    try { o = JSON.parse(b64dec(m[1])); } catch (e) { toast('Enlace de configuración inválido'); return; }
+    if (!o || typeof o.u !== 'string' || typeof o.t !== 'string' || o.t.length < 16 || !hostOk(o.u)) { toast('⚠️ Enlace no válido o de un servidor desconocido'); return; }
+    const sh = openSheet(`<h3>¿Conectar esta app?</h3><p>Se conectará a la hoja del servidor <b>${esc(new URL(o.u).host)}</b>. Acepta solo si el enlace lo has generado tú.</p>
+      <div class="grid2"><button class="btn sec" id="hcNo">Cancelar</button><button class="btn pri" id="hcOk">Conectar</button></div>`);
+    $('#hcNo', sh.el).onclick = () => sh.close();
+    $('#hcOk', sh.el).onclick = () => { cfg.url = o.u; cfg.token = o.t; save(LS.cfg, cfg); renderSettings(); sh.close(); setNet(); toast('🔗 Conectado'); refresh(true); };
+  }
+
   /* ================================================================== ESCÁNER DE TICKETS */
   async function compressImage(file) {
     let bmp;
@@ -587,6 +626,7 @@ ${hab ? `\nCOSTUMBRES DEL USUARIO (palabra → categoría), respétalas cuando e
 
     ['sUrl', 'sTok', 'sKey', 'sMod', 'sBase'].forEach((id) => $('#' + id).addEventListener('change', saveCfg));
     $('#sTest').onclick = testConn;
+    $('#sLink').onclick = shareLink;
     $('#sSync').onclick = async () => { saveCfg(); toast((await refresh(true)) ? '🔄 Sincronizado' : '⚠️ No se pudo sincronizar'); };
     $('#xExp').onclick = exportXlsx;
     $('#xImp').onclick = () => $('#xIn').click();
@@ -604,7 +644,7 @@ ${hab ? `\nCOSTUMBRES DEL USUARIO (palabra → categoría), respétalas cuando e
 
   /* ================================================================== arranque */
   function init() {
-    bind(); renderSettings(); renderDate(); renderAll();
+    bind(); renderSettings(); renderDate(); renderAll(); applyHashConfig();
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
     if (configured()) refresh(true); else go('home');
     if (new URLSearchParams(location.search).get('cam') === '1') setTimeout(() => $('#camIn').click(), 300);

@@ -4,7 +4,9 @@ const assert = require('node:assert/strict');
 const path = require('path');
 const { makeEnv } = require('./gs_harness');
 
-const CODE = process.env.CODE_GS || path.join(__dirname, '..', 'dist', 'Code.gs');
+const fs = require('fs');
+const DIST = path.join(__dirname, '..', 'dist', 'Code.gs');
+const CODE = process.env.CODE_GS || (fs.existsSync(DIST) ? DIST : path.join(__dirname, '..', 'backend', 'Code.gs'));
 const fresh = () => { const env = makeEnv(CODE); const token = env.setup(); return { env, token }; };
 const row = (o = {}) => ({ id: 'id-' + Math.random().toString(36).slice(2), fecha: '2026-10-15', categoria: '🛒 Supermercado y comida', importe: 12.5,
   tipo: 'Gasto', detalle: 'Café', comercio: '', items: '', ticketId: '', origen: 'app', ...o });
