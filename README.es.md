@@ -62,6 +62,8 @@ Ya está publicada en **https://imsothe.github.io/Finanzas/** (GitHub Pages, aut
 ## Cómo se usa
 
 - **➕ Hoy**: escribe el importe → concepto → Guardar. Al escribir `caf`, `figu`, `moto`… sugiere y **elige la categoría solo** (marca *auto ✨*; pulsa para cambiarla). Si le corriges una categoría, **lo aprende** y lo guarda en la hoja (pestaña *Diccionario*).
+- **🖥️ Vista de escritorio**: en pantallas anchas (≥ 1000 px) la misma app cambia a un diseño tipo Excel: *Centro de Mando* (entra / sale / queda, batería, barra de alta rápida, tabla por categorías), **tabla de gastos editable** (cambias fecha, categoría, importe o tipo en la propia celda; añades y borras filas), *Extras* y **Resumen del Año** (12 meses + matriz categoría × mes). Móvil y PC comparten los mismos datos. Se puede forzar en Ajustes → Vista.
+- **Modo Excel (opcional)**: el backend puede escribir directamente en una copia en Google Sheets de la plantilla de Excel (detecta las pestañas `📝 Gastos` y `⚙️ Piloto Automático`) sin tocar sus fórmulas.
 - **Tus habituales**: botones de 1 toque con tus conceptos más repetidos (con su último importe como referencia).
 - **📷 Escanear ticket**: foto → *Rayos X* con el total por categoría y la lista de artículos (toca la categoría de cualquiera para cambiarla). Guardas con:
   - **✂️ Dividir por categorías**: una fila por categoría (la última absorbe el redondeo: la suma es exactamente el total), con el detalle en la columna `Detalle_Items`.

@@ -36,6 +36,8 @@ Everything runs on Google's servers and GitHub Pages, so **your computer does no
 | **Summary** | Month totals and a bar per category (against a budget if you set one). |
 | **Offline-first** | Entries are applied locally and queued; they are sent when the network returns, **exactly once** (retries are idempotent by ID). The app also opens with no connection. |
 | **Excel** | Import your own `.xlsx` (finds the *Fecha / Categoría / Importe* columns, never duplicates on re-import) and export one (first five columns match a typical expenses sheet). |
+| **Desktop view** | On wide screens (≥ 1000 px) the same app switches to a spreadsheet-like layout: a *Command Center* (income / spending / what's left, battery bar, quick-add bar, per-category table), an **editable expenses grid** (change date, category, amount or type in place; add and delete rows), *Extras*, and a **year summary** (12 months × income/spending/left, plus a category × month matrix). Phone and desktop share the same data. Force a layout under Settings → View. |
+| **Excel mode (optional)** | The Apps Script backend can also write straight into a Google Sheets copy of an Excel template (tabs `📝 Gastos` + `⚙️ Piloto Automático` are auto-detected) without touching its formulas. |
 | **Config link** | Copy a one-tap setup link from Settings and open it on another phone, so you never type the long token by hand. |
 
 ## Quick start (about 10 minutes)
