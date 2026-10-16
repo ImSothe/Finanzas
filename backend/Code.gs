@@ -35,6 +35,7 @@ function onOpen() {
 function setup() {
   var ss = SpreadsheetApp.getActive();
   if (ss.getSpreadsheetTimeZone() !== TZ_DEFAULT) ss.setSpreadsheetTimeZone(TZ_DEFAULT);
+  if (excelMode_()) return setupExcelMode_();
   ensureSheet_(ss, SH.gastos, HEAD_GASTOS, { 0: 'dd/mm/yyyy', 2: '#,##0.00' }, [100, 260, 90, 100, 320, 160, 260, 120, 90, 110, 150]);
   ensureSheet_(ss, SH.extras, HEAD_EXTRAS, { 0: 'dd/mm/yyyy', 2: '#,##0.00' }, [100, 220, 90, 320, 110, 150]);
   var cfg = ensureSheet_(ss, SH.config, ['Clave', 'Valor (JSON)'], {}, [160, 700]);
@@ -95,6 +96,7 @@ function bump_() {
 }
 
 function rev_() {
+  if (excelMode_()) return xlRev_();
   var ss = SpreadsheetApp.getActive();
   var g = ss.getSheetByName(SH.gastos), x = ss.getSheetByName(SH.extras);
   var base = PropertiesService.getScriptProperties().getProperty('REV') || '0';
@@ -127,6 +129,7 @@ function num_(v) {
 
 /* ------------------------------------------------------------------ lectura */
 function readGastos_() {
+  if (excelMode_()) return xlReadGastos_();
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.gastos);
   if (!sh || sh.getLastRow() < 2) return [];
   var vals = sh.getRange(2, 1, sh.getLastRow() - 1, HEAD_GASTOS.length).getValues();
@@ -143,6 +146,7 @@ function readGastos_() {
 }
 
 function readExtras_() {
+  if (excelMode_()) return xlReadExtras_();
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.extras);
   if (!sh || sh.getLastRow() < 2) return [];
   var vals = sh.getRange(2, 1, sh.getLastRow() - 1, HEAD_EXTRAS.length).getValues();
@@ -157,6 +161,7 @@ function readExtras_() {
 }
 
 function readConfig_() {
+  if (excelMode_()) return xlReadConfig_();
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.config);
   var cfg = {};
   if (!sh || sh.getLastRow() < 2) return cfg;
@@ -174,12 +179,246 @@ function readDic_() {
     .map(function (r) { return { k: String(r[0]), c: String(r[1]), n: +r[2] || 0, s: String(r[3] || 'app') }; });
 }
 
+/* ------------------------------------------------------------------ MODO EXCEL
+   Si la hoja es tu Excel subido a Google Sheets (pestañas "📝 Gastos", "🚀 Extras" y "⚙️ Piloto Automático"), la app
+   lee y escribe DIRECTAMENTE en esas pestañas, con el mismo diseño de tu Excel: lo que anotas en el móvil sale en la hoja
+   y lo que escribes a mano en la hoja lo ve la app. Las cifras de sueldo, fijos y suscripciones se leen del Piloto. */
+var XL = { gastos: '📝 Gastos', extras: '🚀 Extras', piloto: '⚙️ Piloto Automático', first: 10 };
+
+function excelMode_() {
+  var ss = SpreadsheetApp.getActive();
+  return !!(ss.getSheetByName(XL.gastos) && ss.getSheetByName(XL.piloto));
+}
+
+function xlSheet_(name) { return SpreadsheetApp.getActive().getSheetByName(name); }
+
+function xlRows_(sh) { return Math.max(sh.getMaxRows() - (XL.first - 1), 0); }
+
+function todayIso_() { return Utilities.formatDate(new Date(), tz_(), 'yyyy-MM-dd'); }
+
+function isEmptyCell_(v) { return v === '' || v === null || v === undefined; }
+
+/* Gastos: B fecha · C categoría · D importe · E tipo · F detalle · (G mes, H impacto = fórmulas) · J comercio · K items · L ticketId · M origen · N id */
+function xlReadGastos_() {
+  var sh = xlSheet_(XL.gastos), n = xlRows_(sh);
+  if (n < 1) return [];
+  var vals = sh.getRange(XL.first, 2, n, 13).getValues();            // columnas B..N
+  var out = [];
+  vals.forEach(function (r, i) {
+    var imp = num_(r[2]);
+    if (imp === null || imp <= 0) return;                            // fila sin importe = vacía
+    var row = XL.first + i;
+    var fecha = dateOut_(r[0]);
+    if (!fecha) { fecha = todayIso_(); sh.getRange(row, 2).setValue(dateIn_(fecha)); }   // sin fecha: se fija hoy
+    var id = String(r[12] || '');
+    if (!id) { id = 'h' + Utilities.getUuid().slice(0, 12); sh.getRange(row, 14).setValue(id); }
+    out.push({ id: id, fecha: fecha, categoria: String(r[1] || ''), importe: imp,
+      tipo: String(r[3] || '') === TIPOS[1] ? TIPOS[1] : TIPOS[0], detalle: String(r[4] || ''), comercio: String(r[8] || ''),
+      items: String(r[9] || ''), ticketId: String(r[10] || ''), origen: String(r[11] || 'hoja') });
+  });
+  return out;
+}
+
+/* Extras: B fecha · C tipo · D horas · E €/h · F pago fijo · G total (fórmula) · H detalle · I mes (fórmula) · K id */
+function xlReadExtras_() {
+  var sh = xlSheet_(XL.extras);
+  if (!sh) return [];
+  var n = xlRows_(sh);
+  if (n < 1) return [];
+  var vals = sh.getRange(XL.first, 2, n, 10).getValues();            // columnas B..K
+  var out = [];
+  vals.forEach(function (r, i) {
+    var imp = num_(r[5]);                                            // G = total calculado (horas × precio + pago fijo)
+    if (imp === null || imp === 0) return;
+    var row = XL.first + i;
+    var fecha = dateOut_(r[0]);
+    if (!fecha) { fecha = todayIso_(); sh.getRange(row, 2).setValue(dateIn_(fecha)); }
+    var id = String(r[9] || '');
+    if (!id) { id = 'h' + Utilities.getUuid().slice(0, 12); sh.getRange(row, 11).setValue(id); }
+    out.push({ id: id, fecha: fecha, tipo: String(r[1] || ''), importe: imp, detalle: String(r[6] || '') });
+  });
+  return out;
+}
+
+/* Configuración: se LEE de tu pestaña Piloto (valores ya calculados: la herencia mes a mes la hace la propia hoja). */
+function xlReadConfig_() {
+  var sh = xlSheet_(XL.piloto);
+  var maxR = Math.min(sh.getMaxRows(), 100), maxC = Math.min(sh.getMaxColumns(), 99);
+  var v = sh.getRange(1, 1, maxR, maxC).getValues();
+  var lab = function (r) { return String(v[r][1] || ''); };
+  var find = function (test, from) { for (var r = from || 0; r < v.length; r++) if (test(lab(r))) return r; return -1; };
+
+  var yearRow = find(function (t) { return t.indexOf('Primer año') === 0; });
+  var year0 = yearRow >= 0 ? parseInt(v[yearRow][2], 10) : new Date().getFullYear();
+  var hdr = find(function (t) { return t.indexOf('Concepto') === 0; });
+  var totRow = find(function (t) { return t.indexOf('TOTAL GASTOS FIJOS') === 0; });
+  if (hdr < 0 || totRow < 0) throw new Error('No encuentro la estructura de la pestaña Piloto Automático');
+  var sueldoRow = hdr + 1;
+  var nMonths = maxC - 3;
+  var mk = function (m) { return (year0 + Math.floor(m / 12)) + '-' + ('0' + (m % 12 + 1)).slice(-2); };
+
+  var serie = function (row) {                                       // [{desde, importe}] solo donde cambia el valor
+    var out = [], prev = 0;
+    for (var m = 0; m < nMonths; m++) {
+      var x = num_(v[row][3 + m]) || 0;
+      if (x !== prev) { out.push({ desde: mk(m), importe: x }); prev = x; }
+    }
+    return out;
+  };
+
+  var categorias = [], fijos = {};
+  for (var r = sueldoRow + 1; r < totRow; r++) {
+    var name = lab(r);
+    if (!name) continue;
+    categorias.push({ nombre: name, presupuesto: null });
+    if (!/suscripci/i.test(name)) { var s = serie(r); if (s.length) fijos[name] = s; }
+  }
+  var subsHdr = find(function (t) { return t === 'Nombre'; }, totRow);
+  var subs = [];
+  if (subsHdr >= 0) {
+    for (var q = subsHdr + 1; q <= subsHdr + 20 && q < v.length; q++) {
+      if (!v[q][1]) continue;
+      subs.push({ nombre: String(v[q][1]), importe: num_(v[q][2]) || 0, activa: String(v[q][4] || '') !== 'No' });
+    }
+  }
+  var extHdr = find(function (t) { return t.indexOf('Nombre (') === 0; }, totRow);
+  var tipos = [];
+  if (extHdr >= 0) for (var t = extHdr + 1; t <= extHdr + 6 && t < v.length; t++) if (v[t][1]) tipos.push(String(v[t][1]));
+  return { categorias: categorias, sueldo: serie(sueldoRow), fijos: fijos, suscripciones: subs, tiposExtra: tipos, moneda: '€', fuente: 'excel' };
+}
+
+/* Huella para saber si algo cambió (el contador de la app consulta esto cada 30 s). */
+function xlRev_() {
+  var base = PropertiesService.getScriptProperties().getProperty('REV') || '0';
+  var g = xlSheet_(XL.gastos), x = xlSheet_(XL.extras), cnt = 0, sum = 0, xs = 0;
+  var n = xlRows_(g);
+  if (n > 0) g.getRange(XL.first, 4, n, 1).getValues().forEach(function (r) { var a = num_(r[0]); if (a !== null && a > 0) { cnt++; sum += a; } });
+  if (x) { var m = xlRows_(x); if (m > 0) x.getRange(XL.first, 7, m, 1).getValues().forEach(function (r) { var a = num_(r[0]); if (a !== null) xs += a; }); }
+  return base + ':' + cnt + ':' + Math.round(sum * 100) + ':' + Math.round(xs * 100);
+}
+
+function xlFreeRows_(sh, firstCol, nCols, extraCol, needed) {
+  var n = xlRows_(sh), vals = sh.getRange(XL.first, firstCol, n, nCols).getValues();
+  var extra = extraCol ? sh.getRange(XL.first, extraCol, n, 1).getValues() : null;
+  var free = [];
+  for (var i = 0; i < n && free.length < needed; i++) {
+    var empty = vals[i].every(isEmptyCell_) && (!extra || isEmptyCell_(extra[i][0]));
+    if (empty) free.push(XL.first + i);
+  }
+  if (free.length < needed) throw new Error('La pestaña está llena: no quedan filas libres');
+  return free;
+}
+
+/* agrupa filas consecutivas para escribir por bloques (menos llamadas = más rápido) */
+function xlRuns_(rows) {
+  var runs = [], cur = null;
+  rows.forEach(function (r, i) {
+    if (cur && r === cur.rows[cur.rows.length - 1] + 1) { cur.rows.push(r); cur.idx.push(i); }
+    else { cur = { rows: [r], idx: [i] }; runs.push(cur); }
+  });
+  return runs;
+}
+
+function xlAddGastos_(rows) {
+  var sh = xlSheet_(XL.gastos), seen = {}, n = xlRows_(sh), skipped = 0, now = [];
+  sh.getRange(XL.first, 14, n, 1).getValues().forEach(function (r) { if (r[0]) seen[String(r[0])] = true; });
+  rows.slice(0, 500).forEach(function (r) {
+    var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null, id = str_(r.id, 60);
+    if (imp === null || imp < 0 || !f || !id) throw new Error('Fila inválida (fecha/importe/id)');
+    if (seen[id]) { skipped++; return; }
+    seen[id] = true;
+    now.push({ b: [dateIn_(f), str_(r.categoria, 120), imp, r.tipo === TIPOS[1] ? TIPOS[1] : TIPOS[0], str_(r.detalle, 1000)],
+      j: [str_(r.comercio, 200), str_(r.items, 45000), str_(r.ticketId, 60), str_(r.origen || 'app', 20), id] });
+  });
+  if (now.length) {
+    var free = xlFreeRows_(sh, 2, 5, 14, now.length);                // B..F vacías y sin id en N
+    xlRuns_(free).forEach(function (run) {
+      sh.getRange(run.rows[0], 2, run.rows.length, 5).setValues(run.idx.map(function (i) { return now[i].b; }));
+      sh.getRange(run.rows[0], 10, run.rows.length, 5).setValues(run.idx.map(function (i) { return now[i].j; }));
+    });
+  }
+  return { added: now.length, skipped: skipped };
+}
+
+function xlAddExtras_(rows) {
+  var sh = xlSheet_(XL.extras), seen = {}, n = xlRows_(sh), skipped = 0, now = [];
+  sh.getRange(XL.first, 11, n, 1).getValues().forEach(function (r) { if (r[0]) seen[String(r[0])] = true; });
+  rows.slice(0, 200).forEach(function (r) {
+    var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null, id = str_(r.id, 60);
+    if (imp === null || imp < 0 || !f || !id) throw new Error('Fila inválida (fecha/importe/id)');
+    if (seen[id]) { skipped++; return; }
+    seen[id] = true;
+    now.push({ b: [dateIn_(f), str_(r.tipo, 120), '', '', imp], h: [str_(r.detalle, 1000)], k: [id] });
+  });
+  if (now.length) {
+    var free = xlFreeRows_(sh, 2, 5, 11, now.length);                // B..F vacías y sin id en K
+    xlRuns_(free).forEach(function (run) {
+      sh.getRange(run.rows[0], 2, run.rows.length, 5).setValues(run.idx.map(function (i) { return now[i].b; }));
+      sh.getRange(run.rows[0], 8, run.rows.length, 1).setValues(run.idx.map(function (i) { return now[i].h; }));
+      sh.getRange(run.rows[0], 11, run.rows.length, 1).setValues(run.idx.map(function (i) { return now[i].k; }));
+    });
+  }
+  return { added: now.length, skipped: skipped };
+}
+
+function xlFindRow_(sh, col, id) {
+  if (!id) return -1;
+  var n = xlRows_(sh);
+  if (n < 1) return -1;
+  var vals = sh.getRange(XL.first, col, n, 1).getValues();
+  for (var i = 0; i < vals.length; i++) if (String(vals[i][0]) === String(id)) return XL.first + i;
+  return -1;
+}
+
+function xlUpdateGasto_(id, f) {
+  var sh = xlSheet_(XL.gastos), row = xlFindRow_(sh, 14, id);
+  if (row < 0) throw new Error('No existe ese gasto');
+  var map = { fecha: 2, categoria: 3, importe: 4, tipo: 5, detalle: 6, comercio: 10, items: 11 };
+  Object.keys(f).forEach(function (k) {
+    if (!map[k]) return;
+    var val = f[k];
+    if (k === 'fecha') { if (!/^\d{4}-\d{2}-\d{2}$/.test(String(val))) throw new Error('Fecha inválida'); val = dateIn_(String(val)); }
+    else if (k === 'importe') { val = num_(val); if (val === null || val < 0) throw new Error('Importe inválido'); }
+    else if (k === 'tipo') val = val === TIPOS[1] ? TIPOS[1] : TIPOS[0];
+    else val = str_(val, k === 'items' ? 45000 : 1000);
+    sh.getRange(row, map[k]).setValue(val);
+  });
+  return { updated: 1 };
+}
+
+/* Borrar = vaciar las celdas de entrada (no se elimina la fila: así no se rompen las fórmulas de la hoja). */
+function xlDelete_(extras, id) {
+  var sh = xlSheet_(extras ? XL.extras : XL.gastos), row = xlFindRow_(sh, extras ? 11 : 14, id);
+  if (row < 0) return { deleted: 0 };
+  var blank = function (n) { var a = []; for (var i = 0; i < n; i++) a.push(''); return [a]; };
+  sh.getRange(row, 2, 1, 5).setValues(blank(5));
+  if (extras) { sh.getRange(row, 8, 1, 1).setValues(blank(1)); sh.getRange(row, 11, 1, 1).setValues(blank(1)); }
+  else sh.getRange(row, 10, 1, 5).setValues(blank(5));
+  return { deleted: 1 };
+}
+
+function setupExcelMode_() {
+  var ss = SpreadsheetApp.getActive();
+  var dic = ensureSheet_(ss, SH.dic, ['Clave', 'Categoría', 'Veces', 'Origen'], {}, [200, 320, 70, 100]);
+  if (dic.getLastRow() < 2 && SEED.diccionario.length) {
+    var d = SEED.diccionario.map(function (e) { return [e.k, e.c, e.n || 0, e.s || 'semilla']; });
+    dic.getRange(2, 1, d.length, 4).setValues(d);
+  }
+  var cfg = xlReadConfig_();
+  var token = getToken_(true);
+  bump_();
+  showMsg_('Listo ✅ (modo Excel: la app usará las pestañas de tu Excel)\n\nCategorías detectadas: ' + cfg.categorias.length +
+    '\n\nTu TOKEN (cópialo en Ajustes de la app):\n\n' + token +
+    '\n\nSiguiente paso: Implementar > Nueva implementación > Aplicación web (Ejecutar como: Yo · Acceso: Cualquier usuario) y copia la URL /exec.');
+  return token;
+}
+
 /* ------------------------------------------------------------------ entrada HTTP */
 function doGet(e) {
   var p = (e && e.parameter) || {};
   try {
     if (p.action === 'ping' || !p.action) {
-      return json_({ ok: true, app: 'FinanzasApp', v: APP_VERSION, configured: !!getToken_(false) });
+      return json_({ ok: true, app: 'FinanzasApp', v: APP_VERSION, configured: !!getToken_(false), mode: excelMode_() ? 'excel' : 'hoja' });
     }
     if (!authOk_(p.token)) return fail_('Token incorrecto', 'auth');
     if (p.action === 'rev') return json_({ ok: true, rev: rev_() });
@@ -210,7 +449,7 @@ function doPost(e) {
       case 'add': res = addGastos_(body.rows || []); break;
       case 'addExtra': res = addExtras_(body.rows || []); break;
       case 'update': res = updateGasto_(body.id, body.fields || {}); break;
-      case 'delete': res = deleteById_(body.sheet === 'extras' ? SH.extras : SH.gastos, body.sheet === 'extras' ? 5 : 10, body.id); break;
+      case 'delete': res = excelMode_() ? xlDelete_(body.sheet === 'extras', body.id) : deleteById_(body.sheet === 'extras' ? SH.extras : SH.gastos, body.sheet === 'extras' ? 5 : 10, body.id); break;
       case 'dictSet': res = dictSet_(body.k, body.c, body.s); break;
       case 'dictDel': res = dictDel_(body.k); break;
       case 'configSet': res = configSet_(body.key, body.value); break;
@@ -236,6 +475,7 @@ function existingIds_(sh, col) {
 }
 
 function addGastos_(rows) {
+  if (excelMode_()) return xlAddGastos_(rows);
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.gastos);
   var seen = existingIds_(sh, 10), out = [], skipped = 0, now = new Date();
   rows.slice(0, 500).forEach(function (r) {
@@ -257,6 +497,7 @@ function addGastos_(rows) {
 }
 
 function addExtras_(rows) {
+  if (excelMode_()) return xlAddExtras_(rows);
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.extras);
   var seen = existingIds_(sh, 5), out = [], skipped = 0, now = new Date();
   rows.slice(0, 200).forEach(function (r) {
@@ -283,6 +524,7 @@ function findRow_(sh, col, id) {
 }
 
 function updateGasto_(id, f) {
+  if (excelMode_()) return xlUpdateGasto_(id, f);
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.gastos);
   var row = findRow_(sh, 10, id);
   if (row < 0) throw new Error('No existe ese gasto');

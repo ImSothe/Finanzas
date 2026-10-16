@@ -14,7 +14,8 @@ function makeSheet(name) {
     sh.grid.forEach((row, i) => { if (row.some((v) => v !== '' && v != null)) last = i + 1; });
     return last;
   };
-  sh.getMaxRows = () => Math.max(sh.grid.length, 1000);
+  sh.getMaxRows = () => sh.maxRows || Math.max(sh.grid.length, 1000);
+  sh.getMaxColumns = () => sh.maxCols || (sh.grid[0] ? sh.grid[0].length : 26);
   sh.setFrozenRows = (n) => { sh.frozen = n; };
   sh.setColumnWidth = () => sh;
   sh.appendRow = (arr) => { const r = sh.getLastRow() + 1; ensure(r, arr.length); arr.forEach((v, i) => { sh.grid[r - 1][i] = v; }); };
