@@ -37,7 +37,7 @@ const cell = (sh, ref) => { const m = ref.match(/^([A-Z]+)(\d+)$/); let c = 0; f
 test('detecta el modo Excel, prepara el diccionario y no toca tus pestañas', () => {
   const { env, token } = excelEnv();
   assert.ok(token && token.length >= 32);
-  assert.equal(env.get({ action: 'ping' }).mode, 'excel');
+  assert.equal(env.read('info', token).mode, 'excel');
   assert.ok(env.sheets['Diccionario']);
   assert.ok(!env.sheets['Gastos'] && !env.sheets['Config'], 'no debe crear las pestañas del modo hoja');
   assert.match(env.lastAlert, /modo Excel/);
@@ -45,7 +45,7 @@ test('detecta el modo Excel, prepara el diccionario y no toca tus pestañas', ()
 
 test('config: categorías, sueldo (con su subida), fijos, suscripciones y tipos de extra salen del Piloto', () => {
   const { env, token } = excelEnv();
-  const cfg = env.get({ action: 'data', token }).config;
+  const cfg = env.read('data', token).config;
   const y = fx.year0;
   assert.equal(cfg.fuente, 'excel');
   assert.ok(cfg.categorias.length >= 16);
@@ -61,7 +61,7 @@ test('config: categorías, sueldo (con su subida), fijos, suscripciones y tipos 
 
 test('el núcleo calcula "cuánto me queda" con esa configuración (herencia y suscripción inactiva incluidas)', () => {
   const { env, token } = excelEnv();
-  const d = env.get({ action: 'data', token });
+  const d = env.read('data', token);
   const y = fx.year0;
   const m = C.computeMonth({ config: d.config, gastos: [], extras: [] }, `${y}-06`);
   assert.equal(m.entra, 2000);
@@ -81,7 +81,7 @@ test('añadir gasto escribe en B..F y J..N de la primera fila libre y NO pisa la
   assert.equal(cell(gastos, 'G10'), '=FORMULA_MES');
   assert.equal(cell(gastos, 'H10'), '=FORMULA_IMPACTO');
   assert.ok(cell(gastos, 'B10') instanceof Date);
-  const d = env.get({ action: 'data', token }).gastos;
+  const d = env.read('data', token).gastos;
   assert.equal(d.length, 1);
   assert.deepEqual([d[0].fecha, d[0].importe, d[0].detalle, d[0].origen, d[0].id], ['2026-10-15', 1.5, 'Café', 'app', 'abc-1']);
 });
@@ -94,14 +94,14 @@ test('reintento del mismo envío no duplica; las siguientes filas van seguidas',
   assert.equal(r2.added, 1);
   assert.equal(r2.skipped, 1);
   assert.equal(cell(gastos, 'N11'), 'b');
-  assert.equal(env.get({ action: 'data', token }).gastos.length, 2);
+  assert.equal(env.read('data', token).gastos.length, 2);
 });
 
 test('ticket dividido: filas con TicketID y Detalle_Items intactos', () => {
   const { env, token } = excelEnv();
   const items = JSON.stringify({ v: 1, t: { id: 'T1', c: 'Super', f: '2026-10-15', total: 170 }, l: [{ n: 'Queso', p: 3.5, c: 'x' }] });
   env.post({ token, action: 'add', rows: [row({ id: 's1', importe: 110, ticketId: 'T1', comercio: 'Super', items }), row({ id: 's2', importe: 60, ticketId: 'T1', comercio: 'Super', items })] });
-  const g = env.get({ action: 'data', token }).gastos.filter((x) => x.ticketId === 'T1');
+  const g = env.read('data', token).gastos.filter((x) => x.ticketId === 'T1');
   assert.equal(g.length, 2);
   assert.equal(JSON.parse(g[0].items).t.c, 'Super');
 });
@@ -111,7 +111,7 @@ test('fila escrita a mano en la hoja (solo B..F): la app la ve, le pone ID y fij
   const hoy = new Date().toISOString().slice(0, 10);
   gastos.grid[19][1] = new Date(Date.UTC(2026, 9, 3)); gastos.grid[19][2] = '🍻 Ocio, cenas y salidas'; gastos.grid[19][3] = 25; gastos.grid[19][5 - 0] = 'a mano';   // fila 20
   gastos.grid[20][2] = '🛒 Supermercado y comida'; gastos.grid[20][3] = 9.9;                                                                           // fila 21 sin fecha ni detalle
-  const d = env.get({ action: 'data', token }).gastos;
+  const d = env.read('data', token).gastos;
   assert.equal(d.length, 2);
   const manual = d.find((x) => x.importe === 25), sinFecha = d.find((x) => x.importe === 9.9);
   assert.equal(manual.fecha, '2026-10-03');
@@ -119,7 +119,7 @@ test('fila escrita a mano en la hoja (solo B..F): la app la ve, le pone ID y fij
   assert.equal(cell(gastos, 'N20'), manual.id);                     // el ID queda guardado en la hoja
   assert.equal(sinFecha.fecha, hoy);
   assert.ok(cell(gastos, 'B21') instanceof Date);                   // y la fecha se escribe para que no cambie cada día
-  assert.equal(env.get({ action: 'data', token }).gastos.find((x) => x.importe === 25).id, manual.id);
+  assert.equal(env.read('data', token).gastos.find((x) => x.importe === 25).id, manual.id);
 });
 
 test('borrar vacía las celdas de entrada (no elimina la fila) y esa fila se reutiliza', () => {
@@ -129,7 +129,7 @@ test('borrar vacía las celdas de entrada (no elimina la fila) y esa fila se reu
   assert.equal(env.post({ token, action: 'delete', id: 'd1' }).deleted, 0);
   assert.equal(cell(gastos, 'D10'), '');
   assert.equal(cell(gastos, 'G10'), '=FORMULA_MES');               // la fórmula sigue ahí
-  assert.equal(env.get({ action: 'data', token }).gastos.length, 1);
+  assert.equal(env.read('data', token).gastos.length, 1);
   env.post({ token, action: 'add', rows: [row({ id: 'd3', detalle: 'tres' })] });
   assert.equal(cell(gastos, 'N10'), 'd3');                          // reutiliza el hueco de arriba
 });
@@ -147,7 +147,7 @@ test('update cambia solo campos permitidos', () => {
 test('validaciones: importe/fecha/id inválidos no escriben nada', () => {
   const { env, token } = excelEnv();
   for (const bad of [row({ importe: 'abc' }), row({ fecha: '15/10/2026' }), row({ id: '' }), row({ importe: -3 })]) assert.equal(env.post({ token, action: 'add', rows: [bad] }).ok, false);
-  assert.equal(env.get({ action: 'data', token }).gastos.length, 0);
+  assert.equal(env.read('data', token).gastos.length, 0);
 });
 
 test('extras: se guardan como pago fijo, la app lee el TOTAL calculado por la hoja y borrar los vacía', () => {
@@ -161,7 +161,7 @@ test('extras: se guardan como pago fijo, la app lee el TOTAL calculado por la ho
   extras.grid[9][6] = 50;                                           // la hoja calcula G = horas x precio + pago fijo
   // y un extra escrito a mano por horas: 5 h x 10 €/h = 50 (G lo calcula la hoja)
   extras.grid[10][1] = new Date(Date.UTC(2026, 9, 21)); extras.grid[10][3] = 5; extras.grid[10][4] = 10; extras.grid[10][6] = 50;
-  const d = env.get({ action: 'data', token }).extras;
+  const d = env.read('data', token).extras;
   assert.deepEqual(d.map((x) => x.importe).sort(), [50, 50]);
   assert.equal(env.post({ token, action: 'delete', sheet: 'extras', id: 'x1' }).deleted, 1);
   assert.equal(cell(extras, 'F10'), '');
@@ -169,12 +169,12 @@ test('extras: se guardan como pago fijo, la app lee el TOTAL calculado por la ho
 
 test('la huella cambia al escribir en la hoja (la app se entera de los cambios hechos a mano)', () => {
   const { env, token, gastos } = excelEnv();
-  const r0 = env.get({ action: 'rev', token }).rev;
+  const r0 = env.read('rev', token).rev;
   env.post({ token, action: 'add', rows: [row({ id: 'r1' })] });
-  const r1 = env.get({ action: 'rev', token }).rev;
+  const r1 = env.read('rev', token).rev;
   assert.notEqual(r0, r1);
   gastos.grid[30][3] = 7;                                           // alguien teclea un gasto en la hoja
-  assert.notEqual(env.get({ action: 'rev', token }).rev, r1);
+  assert.notEqual(env.read('rev', token).rev, r1);
 });
 
 test('hoja llena: error claro y sin escribir', () => {
@@ -187,7 +187,7 @@ test('hoja llena: error claro y sin escribir', () => {
 
 test('el modo hoja sigue funcionando igual si no hay pestañas de Excel', () => {
   const env = makeEnv(CODE);
-  env.setup();
-  assert.equal(env.get({ action: 'ping' }).mode, 'hoja');
+  const token = env.setup();
+  assert.equal(env.read('info', token).mode, 'hoja');
   assert.ok(env.sheets['Gastos']);
 });

@@ -9,7 +9,7 @@ const { makeEnv } = require('../tests/gs_harness');
 
 const PORT = +process.argv[2] || 8777;
 const CODE = process.argv[3] || path.join(__dirname, '..', 'dist', 'Code.gs');
-const ROOT = path.join(__dirname, '..', 'app');
+const ROOT = path.resolve(__dirname, '..', 'app');
 const env = makeEnv(CODE);
 const TOKEN = env.setup();
 const MIME = { '.html': 'text/html; charset=utf-8', '.js': 'text/javascript; charset=utf-8', '.json': 'application/json', '.webmanifest': 'application/manifest+json',
@@ -35,7 +35,7 @@ function respuestaGemini(cats) {
 
 const server = http.createServer((req, res) => {
   const url = new URL(req.url, 'http://x');
-  const send = (code, body, type) => { res.writeHead(code, { 'Content-Type': type || 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' }); res.end(body); };
+  const send = (code, body, type) => { res.writeHead(code, { 'Content-Type': type || 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', 'Referrer-Policy': 'no-referrer' }); res.end(body); };
 
   if (url.pathname === '/exec') {
     if (req.method === 'GET') return send(200, JSON.stringify(env.get(Object.fromEntries(url.searchParams))));
@@ -64,8 +64,8 @@ const server = http.createServer((req, res) => {
   if (url.pathname === '/__token') return send(200, JSON.stringify({ token: TOKEN }));
 
   let p = decodeURIComponent(url.pathname); if (p === '/') p = '/index.html';
-  const file = path.join(ROOT, path.normalize(p).replace(/^(\.\.[\/\\])+/, ''));
-  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) return send(404, 'not found', 'text/plain');
+  const file = path.resolve(ROOT, '.' + path.sep + path.normalize(p));
+  if (!file.startsWith(ROOT + path.sep) || !fs.existsSync(file) || !fs.statSync(file).isFile()) return send(404, 'not found', 'text/plain');   // nada fuera de app/
   send(200, fs.readFileSync(file), MIME[path.extname(file)] || 'application/octet-stream');
 });
 server.listen(PORT, '127.0.0.1', () => console.log(`Finanzas (pruebas) en http://127.0.0.1:${PORT}  ·  token: ${TOKEN}`));

@@ -121,11 +121,11 @@ const CODE = process.env.CODE_GS || (fs.existsSync(DIST) ? DIST : path.join(__di
 
 test('backend: configSet guarda deudas/ahorros y cambia la revisión (otro dispositivo lo ve)', () => {
   const env = makeEnv(CODE); const token = env.setup();
-  const rev0 = env.get({ action: 'rev', token }).rev;
+  const rev0 = env.read('rev', token).rev;
   assert.equal(env.post({ token, action: 'configSet', key: 'deudas', value: [{ id: 'd1', tipo: 'debo', importe: 5 }] }).ok, true);
   assert.equal(env.post({ token, action: 'configSet', key: 'ahorros', value: { base: 10, desde: '2026-10' } }).ok, true);
-  assert.notEqual(env.get({ action: 'rev', token }).rev, rev0);
-  const cfg = env.get({ action: 'data', token }).config;
+  assert.notEqual(env.read('rev', token).rev, rev0);
+  const cfg = env.read('data', token).config;
   assert.equal(cfg.deudas[0].id, 'd1'); assert.deepEqual(cfg.ahorros, { base: 10, desde: '2026-10' });
 });
 
@@ -137,7 +137,7 @@ test('backend modo Excel: deudas, ahorros y tarifa se guardan aparte y se leen j
   const token = env.setup();
   assert.equal(env.post({ token, action: 'configSet', key: 'tarifaHora', value: 12.5 }).ok, true);
   assert.equal(env.post({ token, action: 'configSet', key: 'deudas', value: [{ id: 'x', tipo: 'debo', importe: 1 }] }).ok, true);
-  const cfg = env.get({ action: 'data', token }).config;
+  const cfg = env.read('data', token).config;
   assert.equal(cfg.fuente, 'excel');
   assert.equal(cfg.tarifaHora, 12.5); assert.equal(cfg.deudas[0].id, 'x');
   assert.ok(cfg.categorias.length > 5);                    // y el Piloto sigue mandando para lo demás

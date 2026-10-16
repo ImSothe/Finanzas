@@ -4,7 +4,9 @@ const fs = require('fs');
 const vm = require('vm');
 
 function makeSheet(name) {
-  const sh = { name, grid: [], frozen: 0 };
+  const sh = { name, grid: [], frozen: 0, fmt: {}, danger: [] };
+  /* En Google Sheets un texto que empieza por = + - @ se interpreta como FÓRMULA salvo que la celda tenga formato "texto plano" (@). */
+  const marca = (r, c, v) => { if (typeof v === 'string' && /^[=+\-@]/.test(v) && sh.fmt[r + ',' + c] !== '@') sh.danger.push({ r, c, v }); };
   const ensure = (r, c) => {
     while (sh.grid.length < r) sh.grid.push([]);
     for (let i = 0; i < sh.grid.length; i++) while (sh.grid[i].length < c) sh.grid[i].push('');
@@ -18,15 +20,15 @@ function makeSheet(name) {
   sh.getMaxColumns = () => sh.maxCols || (sh.grid[0] ? sh.grid[0].length : 26);
   sh.setFrozenRows = (n) => { sh.frozen = n; };
   sh.setColumnWidth = () => sh;
-  sh.appendRow = (arr) => { const r = sh.getLastRow() + 1; ensure(r, arr.length); arr.forEach((v, i) => { sh.grid[r - 1][i] = v; }); };
+  sh.appendRow = (arr) => { const r = sh.getLastRow() + 1; ensure(r, arr.length); arr.forEach((v, i) => { marca(r, i + 1, v); sh.grid[r - 1][i] = v; }); };
   sh.deleteRow = (r) => { sh.grid.splice(r - 1, 1); };
   sh.getRange = (r, c, nr = 1, nc = 1) => {
     const rng = {
       getValues: () => { ensure(r + nr - 1, c + nc - 1); return sh.grid.slice(r - 1, r - 1 + nr).map((row) => row.slice(c - 1, c - 1 + nc).map((v) => v)); },
       getValue: () => { ensure(r, c); return sh.grid[r - 1][c - 1]; },
-      setValues: (vals) => { ensure(r + nr - 1, c + nc - 1); vals.forEach((row, i) => row.forEach((v, j) => { sh.grid[r - 1 + i][c - 1 + j] = v; })); return rng; },
-      setValue: (v) => { ensure(r, c); sh.grid[r - 1][c - 1] = v; return rng; },
-      setNumberFormat: () => rng, setFontWeight: () => rng, setBackground: () => rng, setFontColor: () => rng,
+      setValues: (vals) => { ensure(r + nr - 1, c + nc - 1); vals.forEach((row, i) => row.forEach((v, j) => { marca(r + i, c + j, v); sh.grid[r - 1 + i][c - 1 + j] = v; })); return rng; },
+      setValue: (v) => { ensure(r, c); marca(r, c, v); sh.grid[r - 1][c - 1] = v; return rng; },
+      setNumberFormat: (f) => { for (let i = 0; i < nr; i++) for (let j = 0; j < nc; j++) sh.fmt[(r + i) + ',' + (c + j)] = f; return rng; }, setFontWeight: () => rng, setBackground: () => rng, setFontColor: () => rng,
     };
     return rng;
   };
@@ -74,6 +76,7 @@ function makeEnv(codePath, opts = {}) {
   env.call = (fn, ...a) => vm.runInContext(`${fn}`, ctx)(...a);
   env.get = (params) => JSON.parse(vm.runInContext('doGet', ctx)({ parameter: params }).getContent());
   env.post = (body) => JSON.parse(vm.runInContext('doPost', ctx)({ postData: { contents: typeof body === 'string' ? body : JSON.stringify(body) } }).getContent());
+  env.read = (action, token) => env.post({ token, action });          // lecturas: por POST, el token nunca va en la URL
   env.setup = () => vm.runInContext('setup', ctx)();
   return env;
 }

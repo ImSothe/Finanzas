@@ -96,12 +96,15 @@ Ya está publicada en **https://imsothe.github.io/Finanzas/** (GitHub Pages, aut
 
 Puedes editar la hoja a mano (las filas sin ID reciben uno solas). El sueldo y los fijos **se heredan hacia delante** como en el Excel: una entrada `{"desde":"2026-10","importe":1500}` vale hasta que pongas otra posterior.
 
+> 🔒 Modelo de seguridad, protecciones y límites conocidos: [SECURITY.md](SECURITY.md).
+
 ## Seguridad y privacidad (léelo)
 
 - La URL de Apps Script es pública, pero **toda operación exige el token** (secreto). Si se filtra: menú *💰 Finanzas App → Regenerar el token*.
 - La **API key de Gemini y el token se guardan solo en el navegador** del dispositivo. La foto va **directamente a Google** (Gemini), comprimida; no pasa por ningún servidor tuyo ni mío. Limita la clave en Google AI Studio si puedes.
 - El contenido de los tickets se trata como **datos, no como instrucciones** (el prompt lo indica) y todo lo que viene de la hoja o de la IA se **escapa** antes de pintarse (probado con cargas maliciosas).
 - Es una app personal pensada para **una sola persona/hoja**; no hay usuarios ni permisos.
+- **Reforzada (ver [SECURITY.md](SECURITY.md))**: política CSP estricta (sin scripts en línea, sin `eval`, destinos de red fijos); el token viaja solo en el cuerpo de peticiones POST, nunca en una URL; el script guarda todo lo externo como **texto plano**, así que una inyección de fórmulas tipo `=IMPORTDATA(…)` no se ejecuta en tu hoja; validación estricta de ID, tamaños y esquemas de configuración; el script solo puede tocar **esta** hoja (`@OnlyCurrentDoc`); SheetJS ≥ 0.20.2; acciones de GitHub fijadas por huella; PIN con PBKDF2 y límite de intentos. Si tu script de Apps Script es anterior a esta versión, la app sigue funcionando pero te avisa para que pegues el nuevo `Code.gs`.
 
 ## Qué se ha probado y qué NO
 

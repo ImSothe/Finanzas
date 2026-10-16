@@ -142,10 +142,10 @@
     let nombre = '', cg = '', simbolo = '';
     if (tipo === 'cripto') {
       const sel = $('#crCoin').value;
-      if (sel === '__otra') { cg = ($('#crCg').value || '').trim().toLowerCase(); if (!cg) return shake($('#crCg')); nombre = cg; }
+      if (sel === '__otra') { cg = ($('#crCg').value || '').trim().toLowerCase(); if (!/^[a-z0-9-]{1,60}$/.test(cg)) { FF.toast('El id de CoinGecko solo lleva letras minúsculas, números y guiones'); return shake($('#crCg')); } nombre = cg; }
       else { const c = COINS.find((x) => x[1] === sel); cg = sel; nombre = c ? c[0] : sel; simbolo = c ? c[2] : ''; }
     } else {
-      nombre = ($('#crNom').value || '').trim(); simbolo = (($('#crSim') || {}).value || '').trim().toUpperCase();
+      nombre = C.nameOk($('#crNom').value); simbolo = (($('#crSim') || {}).value || '').trim().toUpperCase().replace(/[^A-Z0-9.^=-]/g, '').slice(0, 20);
       if (!nombre && simbolo) nombre = simbolo;
       if (!nombre) return shake($('#crNom'));
     }

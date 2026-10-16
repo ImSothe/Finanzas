@@ -118,6 +118,8 @@ You manage everything **from the Google Sheet itself**; the app picks changes up
 | Receipt scan: rate limit | Gemini free tier quota; wait a minute. |
 | Numbers differ from my spreadsheet | Check `Config` (`sueldo`, `fijos`, `suscripciones`) and that categories match exactly. |
 
+> 🔒 Security model, hardening and known limits: see [SECURITY.md](SECURITY.md).
+
 ## Security & privacy
 
 - The token is the only secret protecting your sheet through the public web-app URL. **Don't share the setup link or the token.** If leaked, regenerate it.
@@ -125,6 +127,7 @@ You manage everything **from the Google Sheet itself**; the app picks changes up
 - Receipt text is treated as **data, not instructions** (the prompt says so), and everything coming from the sheet or the AI is **HTML-escaped** before rendering (tested with hostile payloads).
 - The config link only accepts Google Apps Script hosts and always asks for confirmation, so a crafted link cannot silently redirect your data.
 - Single-user design: one sheet, no accounts or permissions.
+- **Hardened (see [SECURITY.md](SECURITY.md))**: strict Content-Security-Policy (no inline scripts, no `eval`, fixed network destinations); the token travels only in POST bodies, never in a URL; the script writes everything external as **plain text** so `=IMPORTDATA(…)`-style formula injection cannot run in your sheet; strict validation of IDs, sizes and config schemas; the script can only touch **this** spreadsheet (`@OnlyCurrentDoc`); vendored SheetJS ≥ 0.20.2; GitHub Actions pinned by commit; PIN hashed with PBKDF2 and rate-limited. If your Apps Script is older than this version the app keeps working but warns you to paste the new `Code.gs`.
 - This repository contains **no personal data**: your categories, salary and dictionary live in your own sheet.
 
 ## What is tested, and what is not

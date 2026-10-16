@@ -104,9 +104,28 @@
   const subtle = window.crypto && window.crypto.subtle;
   const hex = (buf) => [...new Uint8Array(buf)].map((b) => b.toString(16).padStart(2, '0')).join('');
   const sha = async (txt) => hex(await subtle.digest('SHA-256', new TextEncoder().encode(txt)));
-  const getPin = () => { try { return JSON.parse(lsGet('ff.pin')); } catch (e) { return null; } };
+  const getPin = () => { try { const p = JSON.parse(lsGet('ff.pin')); return p && typeof p.s === 'string' && typeof p.h === 'string' ? p : null; } catch (e) { return null; } };
   const rnd = () => hex(crypto.getRandomValues(new Uint8Array(16)));
   const okPin = (p) => /^\d{4,8}$/.test(p);
+  /** PIN demasiado fácil de adivinar (0000, 1234, 4321…): se rechaza. */
+  const pinFlojo = (p) => /^(\d)\1+$/.test(p) || '01234567890'.includes(p) || '09876543210'.includes(p);
+  const PBKDF2_IT = 210000;                                                      // lento a propósito: cada intento cuesta ~0,2 s a quien intente adivinar el PIN
+  const unhex = (h) => Uint8Array.from(h.match(/../g) || [], (b) => parseInt(b, 16));
+  async function derive(pin, saltHex, it) {
+    const key = await subtle.importKey('raw', new TextEncoder().encode(pin), 'PBKDF2', false, ['deriveBits']);
+    return hex(await subtle.deriveBits({ name: 'PBKDF2', hash: 'SHA-256', salt: unhex(saltHex), iterations: it }, key, 256));
+  }
+  const igual = (a, b) => { if (a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+  async function makePin(pin) { const s = rnd(); return { v: 2, s, i: PBKDF2_IT, h: await derive(pin, s, PBKDF2_IT) }; }
+  async function checkPin(p, pin) {
+    if (p.v === 2) return igual(await derive(pin, p.s, Math.min(Math.max(+p.i || PBKDF2_IT, 1000), 1e6)), p.h);
+    const ok = igual(await sha(p.s + pin), p.h);                                  // PIN guardado con la versión antigua: se acepta y se mejora al vuelo
+    if (ok) lsSet('ff.pin', JSON.stringify(await makePin(pin)));
+    return ok;
+  }
+  /* bloqueo tras fallos: se guarda en el dispositivo, así que recargar la página no lo reinicia */
+  const failState = () => { try { const f = JSON.parse(lsGet('ff.pinfail')); return { n: +f.n || 0, until: +f.until || 0 }; } catch (e) { return { n: 0, until: 0 }; } };
+  const failSave = (f) => lsSet('ff.pinfail', JSON.stringify(f));
 
   const lock = document.createElement('div');
   lock.id = 'lockScr'; lock.hidden = true;
@@ -114,17 +133,26 @@
     <input id="lockIn" class="t" type="password" inputmode="numeric" autocomplete="off" maxlength="8" placeholder="••••" style="text-align:center;font-size:26px;letter-spacing:8px"><div id="lockMsg" class="small" style="min-height:20px;margin-top:8px;color:var(--bad)"></div>
     <button class="btn pri" id="lockGo" type="button" style="margin-top:6px">Entrar</button><button class="pc-link" id="lockForgot" type="button" style="margin-top:14px">Olvidé el PIN</button></div>`;
   document.body.appendChild(lock);
-  let fails = 0, hiddenAt = 0, until = 0;
+  let hiddenAt = 0;
 
   const showLock = () => { if (!getPin() || !subtle) return; lock.hidden = false; document.documentElement.classList.add('locked'); const i = $('#lockIn'); i.value = ''; $('#lockMsg').textContent = ''; setTimeout(() => i.focus(), 50); };
-  const hideLock = () => { lock.hidden = true; document.documentElement.classList.remove('locked'); fails = 0; };
+  const hideLock = () => { lock.hidden = true; document.documentElement.classList.remove('locked'); failSave({ n: 0, until: 0 }); };
+  let probando = false;
   async function tryUnlock() {
     const p = getPin(), v = $('#lockIn').value;
     if (!p) return hideLock();
-    if (Date.now() < until) { $('#lockMsg').textContent = 'Espera unos segundos…'; return; }
-    if ((await sha(p.s + v)) === p.h) return hideLock();
-    fails++; $('#lockIn').value = '';
-    if (fails >= 5) { until = Date.now() + 15000; fails = 0; $('#lockMsg').textContent = 'Demasiados intentos. Espera 15 s.'; } else $('#lockMsg').textContent = 'PIN incorrecto';
+    const f = failState(), msg = $('#lockMsg');
+    if (Date.now() < f.until) { msg.textContent = `Demasiados intentos. Espera ${Math.ceil((f.until - Date.now()) / 1000)} s.`; return; }
+    if (probando || !okPin(v)) { if (!okPin(v)) msg.textContent = 'El PIN son de 4 a 8 cifras'; return; }
+    probando = true;
+    try {
+      if (await checkPin(p, v)) return hideLock();
+    } finally { probando = false; }
+    $('#lockIn').value = '';
+    const n = f.n + 1;                                                           // a partir del 5º fallo: 30 s, y se duplica cada vez (máx. 15 min)
+    const espera = n >= 5 ? Math.min(30 * Math.pow(2, n - 5), 900) * 1000 : 0;
+    failSave({ n, until: espera ? Date.now() + espera : 0 });
+    msg.textContent = espera ? `Demasiados intentos. Espera ${Math.round(espera / 1000)} s.` : `PIN incorrecto (${5 - n} intento${5 - n === 1 ? '' : 's'} antes del bloqueo)`;
   }
   $('#lockGo').onclick = tryUnlock;
   $('#lockIn').addEventListener('keydown', (e) => { if (e.key === 'Enter') tryUnlock(); });
@@ -150,13 +178,14 @@
   }
 
   async function restoreBackup(file) {
+    if (file.size > 25e6) { FF.toast('Ese archivo es demasiado grande para ser una copia (máximo 25 MB)'); return; }
     let b;
     try { b = JSON.parse(await file.text()); } catch (e) { FF.toast('Ese archivo no es una copia válida'); return; }
     const plan = C.planRestore(data(), b);
     if (!plan) { FF.toast('Ese archivo no es una copia de Finanzas'); return; }
     const vacia = !(data().config.categorias || []).length;
     const sh = FF.openSheet(`<h3>Restaurar copia</h3><p class="small mut">Copia del ${esc(plan.creado ? plan.creado.slice(0, 10) : 'fecha desconocida')}.</p>
-      <ul style="padding-left:18px;line-height:1.7"><li><b>${plan.gastos.length}</b> gastos que faltan</li><li><b>${plan.extras.length}</b> extras que faltan</li></ul>
+      <ul style="padding-left:18px;line-height:1.7"><li><b>${plan.gastos.length}</b> gastos que faltan</li><li><b>${plan.extras.length}</b> extras que faltan</li>${plan.descartadas ? `<li class="mut"><b>${plan.descartadas}</b> filas con datos no válidos se han descartado</li>` : ''}</ul>
       <label style="display:flex;gap:8px;align-items:center;margin:8px 0"><input type="checkbox" id="rbCfg" ${vacia ? 'checked' : ''}> Restaurar también la configuración (categorías, sueldo, fijos, suscripciones, ahorros, deudas, metas…) <span class="mut small">— sustituye la actual</span></label>
       <p class="small mut">No se borra nada de lo que ya tienes: solo se añade lo que falte.</p>
       <div class="grid2" style="margin-top:12px"><button class="btn sec" id="rbNo">Cancelar</button><button class="btn pri" id="rbOk">Restaurar</button></div>`);
@@ -179,6 +208,7 @@
     if (!d.conectada) { li.push('Hoja de Google: <b>no conectada</b> (la app funciona solo en este dispositivo).'); if (!d.local.categorias) consejo = 'Pulsa “Cargar las categorías de ejemplo” en el aviso de arriba o importa tu Excel.'; }
     else {
       const p = d.ping || {};
+      if (p.antiguo) li.push('⚠️ Tu script de Google es <b>antiguo</b>: el token viaja en la URL y no protege contra fórmulas maliciosas en la hoja. Pega el nuevo Code.gs y vuelve a implementarlo.');
       li.push(p.ok ? `Tu script responde (versión ${esc(p.version || '?')}, modo ${esc(p.modo || 'hoja')}).` : `Tu script <b>no responde bien</b>: ${esc(p.error || 'sin respuesta')}. Revisa la URL y el token en Ajustes, y que el despliegue sea “cualquier persona”.`);
       const s = d.servidor || {};
       if (s.error) li.push(`Datos de la hoja: <b>error</b> — ${esc(s.error)}`);
@@ -218,7 +248,8 @@
     if (e.target.closest('#pinSet')) {
       const v = $('#pinNew', card).value;
       if (!okPin(v)) { FF.toast('El PIN son de 4 a 8 cifras'); return; }
-      const s = rnd(); lsSet('ff.pin', JSON.stringify({ s, h: await sha(s + v) })); paintPin(); FF.toast('🔒 PIN activado'); return;
+      if (pinFlojo(v)) { FF.toast('Ese PIN es demasiado fácil de adivinar (0000, 1234…). Elige otro.'); return; }
+      lsSet('ff.pin', JSON.stringify(await makePin(v))); failSave({ n: 0, until: 0 }); paintPin(); FF.toast('🔒 PIN activado'); return;
     }
     if (e.target.closest('#pinOff')) { if (confirm('¿Quitar el PIN?')) { try { localStorage.removeItem('ff.pin'); } catch (er) { /* nada */ } paintPin(); FF.toast('PIN quitado'); } return; }
     if (e.target.closest('#dgBtn')) return runDiagnose();

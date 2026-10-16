@@ -42,6 +42,18 @@
     const r = await fetch(u.toString(), { method: 'GET', redirect: 'follow' });
     return r.json();
   }
+  /** Lecturas: por POST, para que el token no quede en la URL (registros, historiales, cabeceras). Con un script ANTIGUO que no lo admite,
+      se vuelve al GET una vez y se avisa para que lo actualices. */
+  let legacyGet = false, legacyWarned = false;
+  async function apiRead(action) {
+    if (!legacyGet) {
+      const r = await apiPost({ action });
+      if (!(r && r.code === 'bad-action')) return r;
+      legacyGet = true;
+    }
+    if (!legacyWarned) { legacyWarned = true; toast('⚠️ Tu script de Google es antiguo: pega el nuevo Code.gs para que el token no viaje en la URL.'); }
+    return apiGet({ action });
+  }
   async function apiPost(body) {
     // text/plain evita el "preflight" CORS, que Apps Script no admite
     const r = await fetch(cfg.url, { method: 'POST', redirect: 'follow', headers: { 'Content-Type': 'text/plain;charset=utf-8' }, body: JSON.stringify(Object.assign({ token: cfg.token }, body)) });
@@ -94,10 +106,10 @@
     try {
       await flush();
       if (queue.length) return false;                                        // no descargar encima de cambios sin enviar
-      const meta = await apiGet({ action: 'rev' });
+      const meta = await apiRead('rev');
       if (!meta.ok) { ui.net = meta.code === 'auth' ? 'auth' : 'offline'; return false; }
       if (!force && meta.rev === data.rev) { ui.net = 'idle'; return true; }
-      const d = await apiGet({ action: 'data' });
+      const d = await apiRead('data');
       if (!d.ok) { ui.net = 'offline'; return false; }
       data = { rev: d.rev, config: C.normConfig(Object.assign({ categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, d.config)), diccionario: d.diccionario || [], gastos: d.gastos || [], extras: d.extras || [] };
       overlayQueue(); rebuildIndex(); persistData(); ui.net = 'idle';
@@ -109,9 +121,13 @@
   async function diagnose() {
     const out = { conectada: configured(), local: { categorias: cats().length, gastos: data.gastos.length, pendientes: queue.length, rev: data.rev } };
     if (!configured()) return out;
-    try { const p = await apiGet({ action: 'ping' }); out.ping = { ok: !!p.ok, version: p.v, modo: p.mode, app: p.app, error: p.error }; } catch (e) { out.ping = { error: String(e.message || e) }; }
     try {
-      const d = await apiGet({ action: 'data' });
+      const i = await apiPost({ action: 'info' });
+      if (i && i.code === 'bad-action') { const p = await apiGet({ action: 'ping' }); out.ping = { ok: !!p.ok, version: p.v, modo: p.mode, app: p.app, error: p.error, antiguo: true }; }
+      else out.ping = { ok: !!(i && i.ok), version: i && i.v, modo: i && i.mode, app: i && i.app, error: i && i.error };
+    } catch (e) { out.ping = { error: String(e.message || e) }; }
+    try {
+      const d = await apiRead('data');
       if (d.ok) { const k = (d.config || {}).categorias; out.servidor = { categorias: Array.isArray(k) ? k.length : (k == null ? 'no existe' : 'formato raro (' + typeof k + ')'), claves: Object.keys(d.config || {}), gastos: (d.gastos || []).length, extras: (d.extras || []).length }; }
       else out.servidor = { error: d.error || d.code || 'sin respuesta' };
     } catch (e) { out.servidor = { error: String(e.message || e) }; }
@@ -172,12 +188,32 @@
 
   /* ================================================================== utilidades de interfaz */
   let toastTimer = null;
+  /** El texto del aviso puede llevar <b>…</b> (lo ponemos nosotros), pero NADA más: cualquier otra etiqueta o atributo se convierte en texto.
+      Se analiza en un <template> (inerte: no carga imágenes ni ejecuta nada). Es una segunda barrera por si algún dato llegase sin escapar. */
+  const TAGS_OK = { B: 1, STRONG: 1, I: 1, SMALL: 1, BR: 1 };
+  function safeHtml(html) {
+    const t = document.createElement('template');
+    t.innerHTML = String(html == null ? '' : html);
+    const out = document.createDocumentFragment();
+    const walk = (src, dst) => src.childNodes.forEach((n) => {
+      if (n.nodeType === 3) dst.appendChild(document.createTextNode(n.nodeValue));
+      else if (n.nodeType === 1) {
+        if (TAGS_OK[n.tagName]) { const e = document.createElement(n.tagName.toLowerCase()); walk(n, e); dst.appendChild(e); }
+        else dst.appendChild(document.createTextNode(n.textContent));
+      }
+    });
+    walk(t.content, out);
+    return out;
+  }
   function toast(html, action) {
     const box = $('#toast');
-    box.innerHTML = `<div><span>${html}</span>${action ? `<button id="toastAct">${esc(action.label)}</button>` : ''}</div>`;
-    if (action) $('#toastAct').onclick = () => { box.innerHTML = ''; action.fn(); };
+    box.textContent = '';
+    const wrap = document.createElement('div'), span = document.createElement('span');
+    span.appendChild(safeHtml(html)); wrap.appendChild(span);
+    if (action) { const b = document.createElement('button'); b.id = 'toastAct'; b.textContent = String(action.label); b.onclick = () => { box.textContent = ''; action.fn(); }; wrap.appendChild(b); }
+    box.appendChild(wrap);
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { box.innerHTML = ''; }, action ? 6000 : 3200);
+    toastTimer = setTimeout(() => { box.textContent = ''; }, action ? 6000 : 3200);
   }
 
   const overlay = $('#overlay');
@@ -430,21 +466,28 @@
     const list = data.diccionario.slice().sort((a, b) => (b.n - a.n) || a.k.localeCompare(b.k)).filter((d) => !f || d.k.includes(f) || C.norm(d.c).includes(f)).slice(0, 80);
     $('#dictList').innerHTML = list.map((d) => `<div class="item"><div class="l"><div class="t">${esc(d.k)}</div><div class="s">${esc(d.c)} · ${esc(d.s)}</div></div><button data-del="${esc(d.k)}" aria-label="Borrar" style="font-size:18px">✕</button></div>`).join('') || '<div class="empty">Nada.</div>';
   }
+  /** Solo se acepta una URL de Google Apps Script (o local, para pruebas): si no, el token y tus datos podrían enviarse a un servidor ajeno. */
+  const GEM_BASE = 'https://generativelanguage.googleapis.com';
+  const gemBaseOk = (u) => { try { const x = new URL(u); return (x.protocol === 'https:' && x.hostname === 'generativelanguage.googleapis.com' && !x.username && !x.password) || (x.protocol === 'http:' && (x.hostname === '127.0.0.1' || x.hostname === 'localhost')); } catch (e) { return false; } };
   function saveCfg() {
-    cfg.url = $('#sUrl').value.trim(); cfg.token = $('#sTok').value.trim();
-    cfg.gKey = $('#sKey').value.trim(); cfg.gModel = $('#sMod').value.trim() || 'gemini-2.5-flash';
-    cfg.gBase = ($('#sBase').value.trim() || 'https://generativelanguage.googleapis.com').replace(/\/+$/, '');
+    const url = $('#sUrl').value.trim(), base = ($('#sBase').value.trim() || GEM_BASE).replace(/\/+$/, ''), model = $('#sMod').value.trim() || 'gemini-2.5-flash';
+    let ok = true;
+    if (url && !hostOk(url)) { toast('⚠️ La URL debe ser de Google Apps Script (https://script.google.com/macros/s/…/exec)'); $('#sUrl').value = cfg.url; ok = false; } else cfg.url = url;
+    if (!gemBaseOk(base)) { toast('⚠️ La dirección de Gemini solo puede ser ' + esc(GEM_BASE)); $('#sBase').value = cfg.gBase; ok = false; } else cfg.gBase = base;
+    if (!/^[A-Za-z0-9._\-]{1,60}$/.test(model)) { toast('⚠️ Nombre de modelo no válido'); $('#sMod').value = cfg.gModel; ok = false; } else cfg.gModel = model;
+    cfg.token = $('#sTok').value.trim(); cfg.gKey = $('#sKey').value.trim();
     save(LS.cfg, cfg); setNet(); renderAll();
+    return ok;
   }
   async function testConn() {
-    saveCfg();
+    if (!saveCfg()) return;
     const msg = $('#sMsg');
     if (!cfg.url) { msg.textContent = 'Pega primero la URL.'; return; }
     msg.textContent = 'Probando…';
     try {
       const p = await (await fetch(cfg.url + (cfg.url.includes('?') ? '&' : '?') + 'action=ping', { redirect: 'follow' })).json();
       if (!p.ok) { msg.textContent = '❌ La URL responde, pero no parece la app de Finanzas.'; return; }
-      const d = await apiGet({ action: 'rev' });
+      const d = await apiRead('rev');
       msg.textContent = d.ok ? '✅ Conectado correctamente.' : (d.code === 'auth' ? '🔑 La URL es correcta pero el token no.' : '❌ ' + (d.error || 'error'));
       if (d.ok) refresh(true);
     } catch (e) { msg.textContent = '❌ No se pudo conectar. ¿Está la implementación como "Cualquier usuario"? ¿Tienes conexión?'; }
@@ -458,7 +501,8 @@
   const hostOk = (u) => {
     try {
       const x = new URL(u);
-      if (x.protocol === 'https:') return x.hostname === 'script.google.com' || x.hostname === 'script.googleusercontent.com';
+      if (x.username || x.password) return false;
+      if (x.protocol === 'https:') return (x.hostname === 'script.google.com' && x.pathname.startsWith('/macros/')) || x.hostname === 'script.googleusercontent.com';
       return x.protocol === 'http:' && (x.hostname === '127.0.0.1' || x.hostname === 'localhost');
     } catch (e) { return false; }
   };
@@ -623,6 +667,7 @@
   };
 
   async function importXlsx(file) {
+    if (file.size > 15e6) { toast('Ese archivo es demasiado grande (máximo 15 MB)'); return; }
     try {
       await loadXLSX();
       const wb = XLSX.read(await file.arrayBuffer(), { type: 'array', cellDates: true });
@@ -760,7 +805,7 @@
     ['sUrl', 'sTok', 'sKey', 'sMod', 'sBase'].forEach((id) => $('#' + id).addEventListener('change', saveCfg));
     $('#sTest').onclick = testConn;
     $('#sLink').onclick = shareLink;
-    $('#sSync').onclick = async () => { saveCfg(); toast((await refresh(true)) ? '🔄 Sincronizado' : '⚠️ No se pudo sincronizar'); };
+    $('#sSync').onclick = async () => { if (!saveCfg()) return; toast((await refresh(true)) ? '🔄 Sincronizado' : '⚠️ No se pudo sincronizar'); };
     $('#xExp').onclick = exportXlsx;
     $('#xImp').onclick = () => $('#xIn').click();
     $('#xIn').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; if (f) importXlsx(f); };
@@ -781,10 +826,16 @@
     if ('serviceWorker' in navigator && location.protocol.startsWith('http')) navigator.serviceWorker.register('sw.js').catch(() => {});
     if (configured()) refresh(true); else go('home');
     if (new URLSearchParams(location.search).get('cam') === '1') setTimeout(() => $('#camIn').click(), 300);
-    Object.assign(FF, { get data() { return data; }, get cfg() { return cfg; }, get index() { return index; }, ui, enqueue, addGastos, addExtraRow, delExtra, delGasto,
+    /* OJO: data/cfg/index/queue se REASIGNAN (p. ej. al sincronizar con la hoja). Con Object.assign y un "get" se copiaría el valor del momento
+       y las pantallas de pc.js verían datos viejos para siempre: deben ser accesos EN VIVO. */
+    Object.defineProperties(FF, {
+      data: { get: () => data, enumerable: true }, cfg: { get: () => cfg, enumerable: true },
+      index: { get: () => index, enumerable: true }, queue: { get: () => queue, enumerable: true },
+    });
+    Object.assign(FF, { ui, enqueue, addGastos, addExtraRow, delExtra, delGasto,
       learn, persist: persistData, openSheet, pickCategory, scan: scanFile, toast, esc, cats, openDetail, goMobile, renderAll, refresh, flush, rebuildIndex, loadDefaultCats,
-      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, diagnose, defaultCats: DEFAULT_CATS.slice(),  loadXLSX: () => loadXLSX(), get queue() { return queue; } });
-    window.__ff = { get data() { return data; }, get queue() { return queue; }, get cfg() { return cfg; }, ui, refresh, flush, go, renderAll, scan: scanFile, save: saveCfg };
+      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, diagnose, defaultCats: DEFAULT_CATS.slice(), loadXLSX: () => loadXLSX() });
+    if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__ff = { get data() { return data; }, get queue() { return queue; }, get cfg() { return cfg; }, ui, refresh, flush, go, renderAll, scan: scanFile, save: saveCfg };
   }
   init();
 })();

@@ -9,7 +9,11 @@
  *     Ejecutar como: Yo   ·   Quién tiene acceso: Cualquier usuario.   Copia la URL que termina en /exec.
  *  4. En la app, Ajustes: pega la URL y el TOKEN que te enseñó el paso 2.
  *
+ * @OnlyCurrentDoc  (el script solo puede leer y escribir ESTA hoja de cálculo, nada más de tu cuenta)
+ *
  * SEGURIDAD: la URL es pública, pero TODAS las operaciones exigen el token (secreto). No lo compartas.
+ * El token solo viaja en el cuerpo de peticiones POST (nunca en la URL). Todo lo que llega de fuera se guarda como TEXTO PLANO:
+ * un detalle como =IMPORTDATA(...) no se ejecuta como fórmula.
  * Si cambias este código, hay que volver a implementar: Implementar > Administrar implementaciones > Editar > Versión nueva.
  */
 
@@ -121,6 +125,19 @@ function dateOut_(v) {
 function dateIn_(s) { return Utilities.parseDate(s, tz_(), 'yyyy-MM-dd'); }
 
 function str_(v, max) { return String(v == null ? '' : v).slice(0, max || 500); }
+
+/* Todo texto que llega de fuera (detalle, comercio, categoría, ID…) se guarda como TEXTO PLANO (formato "@"):
+   si no, Google Sheets evaluaría como FÓRMULA cualquier valor que empiece por = + - @ (p. ej. =IMPORTDATA("http://…")), y alguien podría
+   sacar tus datos o ejecutar funciones desde un ticket, un Excel o una copia de seguridad manipulados. */
+function plain_(sh, row, col, nRows, nCols) { sh.getRange(row, col, Math.max(nRows, 1), Math.max(nCols || 1, 1)).setNumberFormat('@'); }
+
+function idOk_(s) { return typeof s === 'string' && /^[A-Za-z0-9_\-]{1,60}$/.test(s); }
+
+function rowsOf_(rows, max) {
+  if (!Array.isArray(rows)) throw new Error('"rows" debe ser una lista');
+  rows.forEach(function (r) { if (!r || typeof r !== 'object' || Array.isArray(r)) throw new Error('Fila inválida'); });
+  return rows.slice(0, max);
+}
 
 function num_(v) {
   var n = typeof v === 'number' ? v : parseFloat(String(v).replace(',', '.'));
@@ -332,9 +349,9 @@ function xlRuns_(rows) {
 function xlAddGastos_(rows) {
   var sh = xlSheet_(XL.gastos), seen = {}, n = xlRows_(sh), skipped = 0, now = [];
   sh.getRange(XL.first, 14, n, 1).getValues().forEach(function (r) { if (r[0]) seen[String(r[0])] = true; });
-  rows.slice(0, 500).forEach(function (r) {
-    var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null, id = str_(r.id, 60);
-    if (imp === null || imp < 0 || !f || !id) throw new Error('Fila inválida (fecha/importe/id)');
+  rowsOf_(rows, 500).forEach(function (r) {
+    var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null, id = String(r.id);
+    if (imp === null || imp < 0 || !f || !idOk_(id)) throw new Error('Fila inválida (fecha/importe/id)');
     if (seen[id]) { skipped++; return; }
     seen[id] = true;
     now.push({ b: [dateIn_(f), str_(r.categoria, 120), imp, r.tipo === TIPOS[1] ? TIPOS[1] : TIPOS[0], str_(r.detalle, 1000)],
@@ -343,6 +360,8 @@ function xlAddGastos_(rows) {
   if (now.length) {
     var free = xlFreeRows_(sh, 2, 5, 14, now.length);                // B..F vacías y sin id en N
     xlRuns_(free).forEach(function (run) {
+      plain_(sh, run.rows[0], 3, run.rows.length, 1); plain_(sh, run.rows[0], 5, run.rows.length, 2);   // C categoría · E tipo · F detalle
+      plain_(sh, run.rows[0], 10, run.rows.length, 5);                                                  // J..N comercio, items, ticketId, origen, id
       sh.getRange(run.rows[0], 2, run.rows.length, 5).setValues(run.idx.map(function (i) { return now[i].b; }));
       sh.getRange(run.rows[0], 10, run.rows.length, 5).setValues(run.idx.map(function (i) { return now[i].j; }));
     });
@@ -353,9 +372,9 @@ function xlAddGastos_(rows) {
 function xlAddExtras_(rows) {
   var sh = xlSheet_(XL.extras), seen = {}, n = xlRows_(sh), skipped = 0, now = [];
   sh.getRange(XL.first, 11, n, 1).getValues().forEach(function (r) { if (r[0]) seen[String(r[0])] = true; });
-  rows.slice(0, 200).forEach(function (r) {
-    var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null, id = str_(r.id, 60);
-    if (imp === null || imp < 0 || !f || !id) throw new Error('Fila inválida (fecha/importe/id)');
+  rowsOf_(rows, 200).forEach(function (r) {
+    var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null, id = String(r.id);
+    if (imp === null || imp < 0 || !f || !idOk_(id)) throw new Error('Fila inválida (fecha/importe/id)');
     if (seen[id]) { skipped++; return; }
     seen[id] = true;
     now.push({ b: [dateIn_(f), str_(r.tipo, 120), '', '', imp], h: [str_(r.detalle, 1000)], k: [id] });
@@ -363,6 +382,7 @@ function xlAddExtras_(rows) {
   if (now.length) {
     var free = xlFreeRows_(sh, 2, 5, 11, now.length);                // B..F vacías y sin id en K
     xlRuns_(free).forEach(function (run) {
+      plain_(sh, run.rows[0], 3, run.rows.length, 1); plain_(sh, run.rows[0], 8, run.rows.length, 1); plain_(sh, run.rows[0], 11, run.rows.length, 1);   // C tipo · H detalle · K id
       sh.getRange(run.rows[0], 2, run.rows.length, 5).setValues(run.idx.map(function (i) { return now[i].b; }));
       sh.getRange(run.rows[0], 8, run.rows.length, 1).setValues(run.idx.map(function (i) { return now[i].h; }));
       sh.getRange(run.rows[0], 11, run.rows.length, 1).setValues(run.idx.map(function (i) { return now[i].k; }));
@@ -381,6 +401,8 @@ function xlFindRow_(sh, col, id) {
 }
 
 function xlUpdateGasto_(id, f) {
+  if (!idOk_(String(id))) throw new Error('ID inválido');
+  if (!f || typeof f !== 'object' || Array.isArray(f)) throw new Error('Campos inválidos');
   var sh = xlSheet_(XL.gastos), row = xlFindRow_(sh, 14, id);
   if (row < 0) throw new Error('No existe ese gasto');
   var map = { fecha: 2, categoria: 3, importe: 4, tipo: 5, detalle: 6, comercio: 10, items: 11 };
@@ -391,6 +413,7 @@ function xlUpdateGasto_(id, f) {
     else if (k === 'importe') { val = num_(val); if (val === null || val < 0) throw new Error('Importe inválido'); }
     else if (k === 'tipo') val = val === TIPOS[1] ? TIPOS[1] : TIPOS[0];
     else val = str_(val, k === 'items' ? 45000 : 1000);
+    if (typeof val === 'string') plain_(sh, row, map[k], 1, 1);
     sh.getRange(row, map[k]).setValue(val);
   });
   return { updated: 1 };
@@ -427,30 +450,33 @@ function setupExcelMode_() {
 function doGet(e) {
   var p = (e && e.parameter) || {};
   try {
-    if (p.action === 'ping' || !p.action) {
-      return json_({ ok: true, app: 'FinanzasApp', v: APP_VERSION, configured: !!getToken_(false), mode: excelMode_() ? 'excel' : 'hoja' });
-    }
-    if (!authOk_(p.token)) return fail_('Token incorrecto', 'auth');
-    if (p.action === 'rev') return json_({ ok: true, rev: rev_() });
-    if (p.action === 'data') {
-      return json_({ ok: true, v: APP_VERSION, rev: rev_(), config: readConfig_(), diccionario: readDic_(),
-        gastos: readGastos_(), extras: readExtras_() });
-    }
-    return fail_('Acción desconocida', 'bad-action');
+    if (p.action === 'ping' || !p.action) return json_({ ok: true, app: 'FinanzasApp' });      // sin datos ni versión: no revela nada
+    return fail_('Las lecturas van por POST (el token no debe viajar en la URL). Recarga la app para actualizarla.', 'use-post');
   } catch (err) {
-    return fail_(String(err && err.message ? err.message : err), 'exception');
+    return fail_('Error interno', 'exception');
   }
 }
 
-function authOk_(t) {
+function authOk_(t) {                                              // comparación en tiempo constante (sin pistas por tiempo de respuesta)
   var real = getToken_(false);
-  return !!real && !!t && String(t) === real;
+  if (!real || typeof t !== 'string' || t.length !== real.length) return false;
+  var d = 0;
+  for (var i = 0; i < real.length; i++) d |= real.charCodeAt(i) ^ t.charCodeAt(i);
+  return d === 0;
 }
 
 function doPost(e) {
   var body;
   try { body = JSON.parse((e && e.postData && e.postData.contents) || '{}'); } catch (err) { return fail_('JSON inválido', 'bad-json'); }
+  if (!body || typeof body !== 'object' || Array.isArray(body)) return fail_('JSON inválido', 'bad-json');
   if (!authOk_(body.token)) return fail_('Token incorrecto', 'auth');
+  if (body.action === 'rev' || body.action === 'data' || body.action === 'info') {              // lecturas (no necesitan el cerrojo)
+    try {
+      if (body.action === 'rev') return json_({ ok: true, rev: rev_() });
+      if (body.action === 'info') return json_({ ok: true, app: 'FinanzasApp', v: APP_VERSION, mode: excelMode_() ? 'excel' : 'hoja' });
+      return json_({ ok: true, v: APP_VERSION, rev: rev_(), config: readConfig_(), diccionario: readDic_(), gastos: readGastos_(), extras: readExtras_() });
+    } catch (err) { return fail_(String(err && err.message ? err.message : err), 'exception'); }
+  }
   var lock = LockService.getScriptLock();
   try { lock.waitLock(20000); } catch (err) { return fail_('Servidor ocupado, reintenta', 'busy'); }
   try {
@@ -488,10 +514,10 @@ function addGastos_(rows) {
   if (excelMode_()) return xlAddGastos_(rows);
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.gastos);
   var seen = existingIds_(sh, 10), out = [], skipped = 0, now = new Date();
-  rows.slice(0, 500).forEach(function (r) {
+  rowsOf_(rows, 500).forEach(function (r) {
     var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null;
-    var id = str_(r.id, 60);
-    if (imp === null || imp < 0 || !f || !id) throw new Error('Fila inválida (fecha/importe/id)');
+    var id = String(r.id);
+    if (imp === null || imp < 0 || !f || !idOk_(id)) throw new Error('Fila inválida (fecha/importe/id)');
     if (seen[id]) { skipped++; return; }                              // reintento de la cola offline: no duplicar
     seen[id] = true;
     out.push([dateIn_(f), str_(r.categoria, 120), imp, r.tipo === TIPOS[1] ? TIPOS[1] : TIPOS[0], str_(r.detalle, 1000),
@@ -499,6 +525,7 @@ function addGastos_(rows) {
   });
   if (out.length) {
     var start = sh.getLastRow() + 1;
+    plain_(sh, start, 2, out.length, 1); plain_(sh, start, 4, out.length, 7);        // categoría, tipo, detalle, comercio, items, ticketId, origen, id
     sh.getRange(start, 1, out.length, HEAD_GASTOS.length).setValues(out);
     sh.getRange(start, 1, out.length, 1).setNumberFormat('dd/mm/yyyy');
     sh.getRange(start, 3, out.length, 1).setNumberFormat('#,##0.00');
@@ -510,16 +537,17 @@ function addExtras_(rows) {
   if (excelMode_()) return xlAddExtras_(rows);
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.extras);
   var seen = existingIds_(sh, 5), out = [], skipped = 0, now = new Date();
-  rows.slice(0, 200).forEach(function (r) {
+  rowsOf_(rows, 200).forEach(function (r) {
     var imp = num_(r.importe), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null;
-    var id = str_(r.id, 60);
-    if (imp === null || imp < 0 || !f || !id) throw new Error('Fila inválida (fecha/importe/id)');
+    var id = String(r.id);
+    if (imp === null || imp < 0 || !f || !idOk_(id)) throw new Error('Fila inválida (fecha/importe/id)');
     if (seen[id]) { skipped++; return; }
     seen[id] = true;
     out.push([dateIn_(f), str_(r.tipo, 120), imp, str_(r.detalle, 1000), id, now]);
   });
   if (out.length) {
     var start = sh.getLastRow() + 1;
+    plain_(sh, start, 2, out.length, 1); plain_(sh, start, 4, out.length, 2);        // tipo, detalle, id
     sh.getRange(start, 1, out.length, HEAD_EXTRAS.length).setValues(out);
     sh.getRange(start, 1, out.length, 1).setNumberFormat('dd/mm/yyyy');
   }
@@ -535,6 +563,8 @@ function findRow_(sh, col, id) {
 
 function updateGasto_(id, f) {
   if (excelMode_()) return xlUpdateGasto_(id, f);
+  if (!idOk_(String(id))) throw new Error('ID inválido');
+  if (!f || typeof f !== 'object' || Array.isArray(f)) throw new Error('Campos inválidos');
   var sh = SpreadsheetApp.getActive().getSheetByName(SH.gastos);
   var row = findRow_(sh, 10, id);
   if (row < 0) throw new Error('No existe ese gasto');
@@ -546,6 +576,7 @@ function updateGasto_(id, f) {
     else if (k === 'importe') { v = num_(v); if (v === null || v < 0) throw new Error('Importe inválido'); }
     else if (k === 'tipo') v = v === TIPOS[1] ? TIPOS[1] : TIPOS[0];
     else v = str_(v, k === 'items' ? 45000 : 1000);
+    if (typeof v === 'string') plain_(sh, row, map[k], 1, 1);
     sh.getRange(row, map[k]).setValue(v);
   });
   return { updated: 1 };
@@ -566,9 +597,12 @@ function dictSet_(k, c, s) {
   var row = findRow_(sh, 1, k);
   if (row > 0) {
     var cur = sh.getRange(row, 3).getValue();
+    plain_(sh, row, 2, 1, 1); plain_(sh, row, 4, 1, 1);
     sh.getRange(row, 2, 1, 3).setValues([[c, (+cur || 0) + 1, str_(s || 'app', 20)]]);
   } else {
-    sh.appendRow([k, c, 1, str_(s || 'app', 20)]);
+    var nr = sh.getLastRow() + 1;
+    plain_(sh, nr, 1, 1, 2); plain_(sh, nr, 4, 1, 1);
+    sh.getRange(nr, 1, 1, 4).setValues([[k, c, 1, str_(s || 'app', 20)]]);
   }
   return { saved: 1 };
 }
@@ -583,7 +617,8 @@ function configSet_(key, value) {
   var row = findRow_(sh, 1, key);
   var txt = JSON.stringify(value);
   if (txt.length > 45000) throw new Error('Configuración demasiado grande para una celda');
-  if (row > 0) sh.getRange(row, 2).setValue(txt); else sh.appendRow([key, txt]);
+  if (row > 0) { plain_(sh, row, 2, 1, 1); sh.getRange(row, 2).setValue(txt); }
+  else { var nr = sh.getLastRow() + 1; plain_(sh, nr, 1, 1, 2); sh.getRange(nr, 1, 1, 2).setValues([[key, txt]]); }
   bump_();
   return { saved: 1 };
 }

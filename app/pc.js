@@ -123,13 +123,13 @@
 
   /** gasto / devolución por categoría de un mes (para el desglose estilo Excel) */
   function catRows(mk, m) {
-    const g = {};
+    const g = Object.create(null);
     data().gastos.forEach((x) => {
       if (C.monthKey(x.fecha) !== mk) return;
       const b = g[x.categoria] || (g[x.categoria] = { g: 0, d: 0 });
       if (x.tipo === C.TIPO_DEV) b.d += x.importe; else b.g += x.importe;
     });
-    const fijoBy = {};
+    const fijoBy = Object.create(null);
     m.filas.forEach((f) => { fijoBy[f.cat] = f.fijo; });
     const nombres = cats().slice();
     Object.keys(g).forEach((n) => { if (!nombres.includes(n)) nombres.push(n); });
@@ -158,7 +158,7 @@
 
   function cmdView() {
     const mk = FF.ui.mk, m = C.computeMonth(data(), mk), cr = catRows(mk, m);
-    const ex = {};
+    const ex = Object.create(null);
     const tipos = (data().config.tiposExtra || []).slice();
     data().extras.filter((e) => C.monthKey(e.fecha) === mk).forEach((e) => { const k = tipos.includes(e.tipo) ? e.tipo : '❓ Extras sin tipo elegido'; ex[k] = C.r2((ex[k] || 0) + e.importe); });
     Object.keys(ex).forEach((t) => { if (!tipos.includes(t)) tipos.push(t); });
@@ -596,8 +596,8 @@
       FF.toast('✓ Ahorros guardados'); pending = false; return render();
     }
     if (e.target.closest('#pCatAdd')) {
-      const n = $('#pCatNew').value.trim();
-      if (!n) return shake($('#pCatNew'));
+      const n = C.nameOk($('#pCatNew').value);
+      if (!n) { FF.toast('Pon un nombre válido para la categoría'); return shake($('#pCatNew')); }
       if (cats().some((c) => C.norm(c) === C.norm(n))) { FF.toast('Esa categoría ya existe'); return; }
       FF.setConfig('categorias', catObjs().concat([{ nombre: n, presupuesto: null }])); FF.toast('✓ Categoría añadida'); return now();
     }

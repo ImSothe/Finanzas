@@ -1,0 +1,8 @@
+# Avisa (con una petición de cambio) cuando una acción de GitHub fijada por huella tiene versión nueva
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    open-pull-requests-limit: 5

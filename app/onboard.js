@@ -181,7 +181,7 @@
     else if (a === 'close') wizClose();
     else if (a === 'excel') { wizClose(); const f = $('#xIn'); if (f) f.click(); }
     else if (a === 'addcat') {
-      const i = $('#wzCat', wz.el), n = i.value.trim();
+      const i = $('#wzCat', wz.el), n = C.nameOk(i.value);
       if (!n) return i.focus();
       if (!wz.cats.some((x) => C.norm(x) === C.norm(n))) { wz.cats.push(n); wz.sel.add(n); } wizPaint();
     } else if (a === 'finish') {
