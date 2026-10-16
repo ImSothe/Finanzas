@@ -1,5 +1,5 @@
 /* Service worker: la app abre al instante y sin cobertura. Nunca intercepta la hoja de Google ni la API de Gemini. */
-const CACHE = 'finanzas-v4';
+const CACHE = 'finanzas-v5';
 const SHELL = ['./', './index.html', './core.js', './app.js', './pc.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {

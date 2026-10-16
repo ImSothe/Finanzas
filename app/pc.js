@@ -35,10 +35,13 @@
     <button data-v="deudas">🤝 Deudas</button>
     <button data-v="piloto">⚙️ Piloto Automático</button>
     <button data-v="ajustes">🔧 Ajustes y conexión</button>
-    <div class="pc-foot"><span id="pcSync" class="chip">…</span><button id="pcToMobile" class="pc-link" type="button">📱 Ver como móvil</button></div>`;
+    <div class="pc-foot"><span id="pcSync" class="chip">…</span><button id="pcToMobile" class="pc-link" type="button">📱 Vista simplificada</button></div>`;
+  const advBtn = document.createElement('button');
+  advBtn.id = 'pcToAdv'; advBtn.type = 'button'; advBtn.hidden = true; advBtn.textContent = '🖥️ Modo avanzado';
+  advBtn.addEventListener('click', () => setPref('auto'));
   const pcMain = document.createElement('section');
   pcMain.id = 'pcMain'; pcMain.hidden = true;
-  document.body.append(nav, pcMain);
+  document.body.append(nav, pcMain, advBtn);
 
   function apply() {
     const on = active();
@@ -57,6 +60,7 @@
       pcMain.hidden = true; main.hidden = false;
       FF.goMobile(FF.ui.view || 'home');
     }
+    advBtn.hidden = on || !mq.matches;                      // vista simplificada en una pantalla ancha: ofrece volver al modo avanzado
     syncLayoutSelect();
   }
 
@@ -593,8 +597,8 @@
     const host = $('#v-set'); if (!host) return;
     const card = document.createElement('div');
     card.className = 'card';
-    card.innerHTML = `<h2>Vista</h2><select id="sLayout" class="t"><option value="auto">Automática (escritorio en pantallas anchas)</option><option value="pc">Siempre escritorio</option><option value="mobile">Siempre móvil</option></select>
-      <p class="small mut" style="margin:10px 0 0">La vista de escritorio muestra tu Centro de Mando, la tabla de gastos editable y el resumen del año, parecido a tu Excel.</p>`;
+    card.innerHTML = `<h2>Vista</h2><select id="sLayout" class="t"><option value="auto">Automática (modo avanzado en pantallas anchas)</option><option value="pc">Siempre modo avanzado</option><option value="mobile">Siempre vista simplificada</option></select>
+      <p class="small mut" style="margin:10px 0 0"><b>Modo avanzado</b>: Centro de Mando, tablas editables, Ahorros, Deudas, Piloto y resumen del año, parecido a tu Excel. <b>Vista simplificada</b>: la de móvil, rápida para apuntar gastos.</p>`;
     host.insertBefore(card, host.firstElementChild);
     const mas = document.createElement('div');
     mas.className = 'card mobile-only';

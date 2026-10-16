@@ -189,6 +189,8 @@ body.pm .pc-card .v{font-size:28px}
   #toast{bottom:24px;left:230px}
 }
 .battery::after,.pc-batbar::after{content:'';position:absolute;inset:0;background:linear-gradient(90deg,transparent calc(50% - 1px),#ffffff44 calc(50% - 1px) calc(50% + 1px),transparent calc(50% + 1px) calc(80% - 1px),#ffffff44 calc(80% - 1px) calc(80% + 1px),transparent calc(80% + 1px));pointer-events:none}
+#pcToAdv{position:fixed;top:calc(10px + var(--safe-t));right:16px;z-index:45;background:var(--acc);color:#04241a;font-weight:700;font-size:14px;border-radius:999px;padding:9px 16px;box-shadow:0 4px 16px #0006}
+#pcToAdv[hidden]{display:none}
 </style>
 </head>
 <body>
