@@ -4,7 +4,7 @@
   "private": true,
   "description": "PWA de gastos en 3 segundos + escáner de tickets con IA, conectada a Google Sheets (Apps Script).",
   "scripts": {
-    "test": "node --test tests/",
+    "test": "node --test",
     "dev": "node tools/dev_server.js 8777",
     "build:seed": "python tools/build_seed.py",
     "build:gs": "python tools/build_gs.py"
