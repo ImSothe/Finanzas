@@ -15,6 +15,7 @@
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Finanzas">
+<script>try{if(localStorage.getItem('ff.pin'))document.documentElement.classList.add('locked')}catch(e){}</script>
 <style>
 :root{--bg:#070b17;--card:#0f1730;--card2:#16204a;--line:#233067;--txt:#eaf0ff;--mut:#8f9cd0;--acc:#22d3ee;--acc2:#67e8f9;--warn:#fb923c;--bad:#f43f5e;--blue:#818cf8;--violet:#a78bfa;
   --r:16px;--safe-b:env(safe-area-inset-bottom,0px);--safe-t:env(safe-area-inset-top,0px)}
@@ -237,6 +238,30 @@ body.pc #pcNav{background:linear-gradient(180deg,#0c1538 0%,#070b17 100%);border
 .tbl .nbar{background:linear-gradient(90deg,#fb923c55,#fb923c22);border-radius:0 8px 8px 0}
 .tbl.grid tr.newrow td{background:#22d3ee0e;border-bottom:2px solid var(--acc)}
 .tbl tr.g td{color:var(--acc2)}.tbl tr.o td{color:var(--warn)}.tbl tr.b td{color:#a5b4fc}
+.bud{height:4px;background:#ffffff14;border-radius:9px;margin-top:5px;overflow:hidden}
+.bud i{display:block;height:100%;border-radius:9px;background:linear-gradient(90deg,#22d3ee,#38bdf8)}
+.bud.aviso i{background:linear-gradient(90deg,#fb923c,#f59e0b)}.bud.pasado i{background:linear-gradient(90deg,#f43f5e,#ef4444)}
+.goalbar{height:12px;background:#0a1128;border:1px solid #2b3c7a99;border-radius:999px;overflow:hidden;box-shadow:inset 0 2px 5px #0008}
+.goalbar i{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#22d3ee,#818cf8);box-shadow:0 0 12px #22d3ee66;transition:width .5s}
+html.locked body>*:not(#lockScr){visibility:hidden!important}
+#lockScr{position:fixed;inset:0;z-index:200;display:flex;align-items:center;justify-content:center;background:radial-gradient(900px 500px at 50% 0,#22d3ee22,transparent 60%),#070b17;padding:20px}
+#lockScr[hidden]{display:none}
+#lockScr .lbox{width:min(340px,100%);text-align:center}
+.guia{display:grid;gap:10px;margin-bottom:14px}
+.gpaso{display:flex;align-items:center;gap:14px;margin:0}
+.gpaso .gn{flex:none;width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-weight:800;background:#ffffff12;color:var(--mut)}
+.gpaso.ok .gn{background:linear-gradient(135deg,#22d3ee,#3b82f6);color:#031a22}
+.gpaso.ok .gt b{color:var(--acc2)}
+.gpaso .gt{flex:1;min-width:0}
+.glist{margin:0;padding-left:18px;line-height:1.6;color:var(--txt)}
+.glist li{margin-bottom:4px}
+.gdon{display:flex;gap:24px;align-items:center;flex-wrap:wrap}
+.gdonut{width:220px;height:220px;flex:none}
+.gleg{flex:1;min-width:240px}
+.gdot{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:8px}
+.gbars{width:100%;max-width:980px;height:auto;display:block;margin:0 auto}
+.gnav{display:inline-flex;align-items:center;gap:6px}
+body.pm .gpaso{flex-wrap:wrap}
 </style>
 </head>
 <body>
@@ -377,5 +402,6 @@ body.pc #pcNav{background:linear-gradient(180deg,#0c1538 0%,#070b17 100%);border
 <script src="core.js"></script>
 <script src="app.js"></script>
 <script src="pc.js"></script>
+<script src="more.js"></script>
 </body>
 </html>

@@ -133,6 +133,23 @@
     rows.forEach((r) => data.gastos.push(r));
     persistData();
     for (let i = 0; i < rows.length; i += 400) enqueue('add', { rows: rows.slice(i, i + 400) });
+    budgetNotice(rows);
+  }
+  /** Aviso al cruzar el 80 % o el 100 % del presupuesto de una categoría (solo la vez que se cruza). */
+  function budgetNotice(rows) {
+    if (rows.length > 10) return;
+    const seen = new Set();
+    rows.forEach((r) => {
+      if (r.tipo === C.TIPO_DEV || !r.categoria) return;
+      const mk = C.monthKey(r.fecha), k = mk + '|' + r.categoria;
+      if (seen.has(k)) return;
+      seen.add(k);
+      const imp = rows.filter((x) => x.categoria === r.categoria && C.monthKey(x.fecha) === mk && x.tipo !== C.TIPO_DEV).reduce((t, x) => t + x.importe, 0);
+      const x = C.budgetCrossing(data, mk, r.categoria, imp);
+      if (!x) return;
+      const cat = esc(r.categoria.replace(/\s*\(.*$/, ''));
+      setTimeout(() => toast(x.nivel === 'pasado' ? `🚨 Te has pasado del presupuesto de <b>${cat}</b> (${Math.round(x.pct * 100)}%)` : `⚠️ Llevas el <b>${Math.round(x.pct * 100)}%</b> del presupuesto de <b>${cat}</b> · quedan ${esc(C.fmtEUR(x.queda))}`), 1700);
+    });
   }
   function delGasto(id) {
     data.gastos = data.gastos.filter((g) => g.id !== id); persistData();
@@ -752,7 +769,7 @@
     if (new URLSearchParams(location.search).get('cam') === '1') setTimeout(() => $('#camIn').click(), 300);
     Object.assign(FF, { get data() { return data; }, get cfg() { return cfg; }, get index() { return index; }, ui, enqueue, addGastos, addExtraRow, delExtra, delGasto,
       learn, persist: persistData, openSheet, pickCategory, scan: scanFile, toast, esc, cats, openDetail, goMobile, renderAll, refresh, flush, rebuildIndex, loadDefaultCats,
-      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, loadXLSX: () => loadXLSX(), get queue() { return queue; } });
+      shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig,  loadXLSX: () => loadXLSX(), get queue() { return queue; } });
     window.__ff = { get data() { return data; }, get queue() { return queue; }, get cfg() { return cfg; }, ui, refresh, flush, go, renderAll, scan: scanFile, save: saveCfg };
   }
   init();

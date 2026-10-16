@@ -33,7 +33,9 @@
     <button data-v="anio">📅 Resumen del Año</button>
     <button data-v="ahorros">🏦 Ahorros</button>
     <button data-v="deudas">🤝 Deudas</button>
+    <button data-v="graficos">📈 Gráficos</button>
     <button data-v="piloto">⚙️ Piloto Automático</button>
+    <button data-v="guia">📖 Empieza aquí</button>
     <button data-v="ajustes">🔧 Ajustes y conexión</button>
     <div class="pc-foot"><span id="pcSync" class="chip">…</span><button id="pcToMobile" class="pc-link" type="button">📱 Vista simplificada</button></div>`;
   const advBtn = document.createElement('button');
@@ -116,6 +118,7 @@
     if (!silent) FF.goMobile('set');
   }
   FF.closePage = closePage;
+  FF.openPage = (v) => (FF.pcActive ? FF.pcGo(v) : openPage(v));
 
   /** gasto / devolución por categoría de un mes (para el desglose estilo Excel) */
   function catRows(mk, m) {
@@ -169,6 +172,7 @@
       ${semaforo(m)}
       ${apartado > 0 ? `<div class="small" style="margin:-6px 2px 14px;color:var(--acc2)">💪 De lo gastado, <b>${esc(fmt(apartado))}</b> es inversión y ahorro: no se pierde, es tuyo${m.entra > 0 ? ` (${Math.round((apartado / m.entra) * 100)}% de lo ganado)` : ''}.</div>` : ''}
       ${quickBar()}
+      ${avisosCard(m)}
       <div class="pc-grid2">
         <div class="card"><h2>1 · Lo ganado este mes</h2>
           <table class="tbl"><thead><tr><th>Concepto</th><th class="r">Importe</th></tr></thead><tbody>
@@ -177,7 +181,7 @@
             <tr class="tot"><td>💰 TOTAL GANADO</td><td class="r">${esc(fmt(m.entra))}</td></tr></tbody></table></div>
         <div class="card"><h2>2 · Lo gastado este mes, por categorías</h2>
           <table class="tbl"><thead><tr><th>Categoría</th><th class="r">⚙️ Fijo</th><th class="r">📝 Día a día</th><th class="r">🔄 Devol.</th><th class="r">Gasto neto</th><th class="r">%</th></tr></thead><tbody>
-            ${cr.all.map((r) => { const z = !r.fijo && !r.gasto && !r.dev; return `<tr class="${z ? 'zero' : ''}"><td>${esc(r.cat)}</td><td class="r">${esc(fmt(r.fijo))}</td><td class="r">${esc(fmt(r.gasto))}</td><td class="r">${esc(fmt(r.dev))}</td>
+            ${cr.all.map((r) => { const z = !r.fijo && !r.gasto && !r.dev; const bs = C.budgetStatus({ presupuesto: (catObjs().find((c) => c.nombre === r.cat) || {}).presupuesto, total: r.neto }); return `<tr class="${z ? 'zero' : ''}"><td>${esc(r.cat)}${bs ? `<div class="bud ${bs.nivel}" title="${Math.round(bs.pct * 100)}% del presupuesto"><i style="width:${Math.min(100, bs.pct * 100).toFixed(0)}%"></i></div>` : ''}</td><td class="r">${esc(fmt(r.fijo))}</td><td class="r">${esc(fmt(r.gasto))}</td><td class="r">${esc(fmt(r.dev))}</td>
               <td class="r nb"><span class="nbar" style="width:${totalSale > 0 && r.neto > 0 ? Math.min(100, (r.neto / totalSale) * 100 * 1.6).toFixed(1) : 0}%"></span><b>${esc(fmt(r.neto))}</b></td><td class="r mut">${totalSale > 0 && r.neto > 0 ? Math.round((r.neto / totalSale) * 100) + '%' : ''}</td></tr>`; }).join('')}
             <tr class="tot"><td>TOTAL GASTADO</td><td class="r">${esc(fmt(cr.tot.fijo))}</td><td class="r">${esc(fmt(cr.tot.gasto))}</td><td class="r">${esc(fmt(cr.tot.dev))}</td><td class="r">${esc(fmt(cr.tot.neto))}</td><td></td></tr></tbody></table></div>
       </div>`;
@@ -317,6 +321,7 @@
           <div class="pc-btns"><button class="btn pri" id="aSave" type="button">💾 Guardar</button></div>
         </div>
         <p class="small mut" style="margin:10px 0 0">${a.desde ? '' : '⚠️ Aún no has puesto desde cuándo cuentas: sin eso no se calcula nada. '}Al cambiar de año los ahorros siguen: el 1 de enero empiezas con lo que tenías a 31 de diciembre.</p></div>
+      ${metasCard()}
       <div class="card" style="padding:0;overflow:auto"><table class="tbl yr"><thead><tr><th>${Y}</th><th class="r">💵 Ganado</th><th class="r">💸 Gastado</th><th class="r">💪 Apartado</th><th class="r">💰 Ahorrado en el mes</th><th class="r">🏦 Ahorros a final de mes</th></tr></thead><tbody>
         ${meses.map((mk, i) => { const f = por[mk]; return `<tr><td>${esc(C.MESES[i])}</td>${cell(f ? f.entra : null, mk)}${cell(f ? f.sale : null, mk)}${cell(f ? f.apartado : null, mk)}${cell(f ? f.ahorrado : null, mk)}${cell(f ? f.acumulado : null, mk)}</tr>`; }).join('')}
       </tbody></table></div>`;
@@ -356,6 +361,10 @@
     return s.sort((a, b) => (a.desde < b.desde ? -1 : 1));
   };
 
+  const SUBF = ['nombre', 'importe', 'cada', 'personas', 'dia', 'desde', 'categoria', 'activa'];
+  const nextCharge = (s) => C.upcomingCharges({ suscripciones: [s] }, hoy(), 1)[0];
+  const ddmm = (iso) => iso.slice(8, 10) + '/' + iso.slice(5, 7);
+
   function pilotoView() {
     const mk = st.pil || FF.ui.mk, [Y, M] = mk.split('-').map(Number), cfg = data().config, ex = cfg.fuente === 'excel';
     const sel = `<select id="pMes" class="t pc-sel">${C.MESES.map((n, i) => `<option value="${i + 1}" ${i + 1 === M ? 'selected' : ''}>${n}</option>`).join('')}</select>
@@ -363,29 +372,74 @@
     const desdeDe = (serie) => { let b = null; (serie || []).forEach((e) => { if (e.desde <= mk && (!b || e.desde >= b.desde)) b = e; }); return b ? C.monthLabel(b.desde) : '—'; };
     const inp = (key, serie) => `<input type="number" step="0.01" min="0" class="cell r" data-pil="${esc(key)}" value="${C.effectiveAt(serie, mk)}" ${ex ? 'disabled' : ''}>`;
     if (ex) return head('⚙️ Piloto') + '<div class="card">Tu hoja está en <b>modo Excel</b>: el sueldo, los gastos fijos, las suscripciones y los tipos de extra se editan en la pestaña <b>⚙️ Piloto Automático</b> de tu Google Sheet y la app los lee de allí.</div>';
-    const cats = catObjs();
-    return head('⚙️ Piloto Automático · lo que se repite cada mes', `<span class="mut small">Los cambios valen a partir de:</span>${sel}`) + `
-      <div class="small mut" style="margin:0 4px 12px">Escribe el importe en el mes en el que cambia: <b>se queda así todos los meses siguientes</b> (igual que en el Excel). Para cambiarlo más adelante, elige ese mes arriba y escribe el nuevo importe.</div>
-      <div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="min-width:300px">Concepto</th><th class="r" style="width:170px">Importe/mes desde ${esc(C.MESES[M - 1].slice(0, 3))} ${Y}</th><th style="width:170px">Vigente desde</th><th style="width:50px"></th></tr></thead><tbody>
-        <tr><td><b>💵 Mi sueldo (lo que cobro cada mes)</b></td><td>${inp('__sueldo', cfg.sueldo)}</td><td class="mut">${esc(desdeDe(cfg.sueldo))}</td><td></td></tr>
-        ${cats.map((c) => /suscripci/i.test(c.nombre)
-    ? `<tr><td>${esc(c.nombre)}</td><td class="r mut">${esc(fmt((cfg.suscripciones || []).filter((s) => s.activa !== false).reduce((a, s) => a + (Number(s.importe) || 0), 0)))}</td><td class="mut">automático (tabla de abajo)</td><td></td></tr>`
-    : `<tr><td>${esc(c.nombre)}</td><td>${inp(c.nombre, (cfg.fijos || {})[c.nombre])}</td><td class="mut">${esc(desdeDe((cfg.fijos || {})[c.nombre]))}</td><td class="acc"><button class="ib" data-catdel="${esc(c.nombre)}" title="Quitar categoría">🗑</button></td></tr>`).join('')}
-        <tr class="newrow"><td><input type="text" class="cell" id="pCatNew" placeholder="➕ Nueva categoría (con emoji, ej. 🐶 Mascotas)"></td><td></td><td></td><td class="acc"><button class="ib add" id="pCatAdd" title="Añadir categoría">＋</button></td></tr>
+    const cats = catObjs(), subs = cfg.suscripciones || [], modoCobro = cfg.subsModo === 'cobro';
+    const mesActual = C.monthKey(hoy());
+    const catOpts = (cur) => `<option value="">Suscripciones (por defecto)</option>${cats.filter((c) => !/suscripci/i.test(c.nombre)).map((c) => `<option ${c.nombre === cur ? 'selected' : ''}>${esc(c.nombre)}</option>`).join('')}`;
+    const subTot = C.subsForMonth(cfg, mk, cats.map((c) => c.nombre)).total;
+    return head('⚙️ Piloto Automático · lo que se repite', `<span class="mut small">Los cambios valen a partir de:</span>${sel}`) + `
+      <div class="small mut" style="margin:0 4px 12px">Escribe el importe en el mes en el que cambia: <b>se queda así todos los meses siguientes</b> (igual que en el Excel). Para cambiarlo más adelante, elige ese mes arriba y escribe el nuevo importe. El <b>presupuesto</b> es lo máximo que quieres gastar al mes en esa categoría: la app te avisa al llegar al 80 %.</div>
+      <div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="min-width:280px">Concepto</th><th class="r" style="width:170px">Importe/mes desde ${esc(C.MESES[M - 1].slice(0, 3))} ${Y}</th><th style="width:150px">Vigente desde</th><th class="r" style="width:150px">🚦 Presupuesto/mes</th><th style="width:50px"></th></tr></thead><tbody>
+        <tr><td><b>💵 Mi sueldo (lo que cobro cada mes)</b></td><td>${inp('__sueldo', cfg.sueldo)}</td><td class="mut">${esc(desdeDe(cfg.sueldo))}</td><td></td><td></td></tr>
+        ${cats.map((c) => { const pres = `<td><input type="number" step="1" min="0" class="cell r" data-pres="${esc(c.nombre)}" value="${c.presupuesto != null ? c.presupuesto : ''}" placeholder="sin límite"></td>`; return /suscripci/i.test(c.nombre)
+    ? `<tr><td>${esc(c.nombre)}</td><td class="r mut">${esc(fmt(subTot))}</td><td class="mut">automático (tabla de abajo)</td>${pres}<td></td></tr>`
+    : `<tr><td>${esc(c.nombre)}</td><td>${inp(c.nombre, (cfg.fijos || {})[c.nombre])}</td><td class="mut">${esc(desdeDe((cfg.fijos || {})[c.nombre]))}</td>${pres}<td class="acc"><button class="ib" data-catdel="${esc(c.nombre)}" title="Quitar categoría">🗑</button></td></tr>`; }).join('')}
+        <tr class="newrow"><td><input type="text" class="cell" id="pCatNew" placeholder="➕ Nueva categoría (con emoji, ej. 🐶 Mascotas)"></td><td></td><td></td><td></td><td class="acc"><button class="ib add" id="pCatAdd" title="Añadir categoría">＋</button></td></tr>
       </tbody></table></div>
       <div class="small mut" style="margin:6px 4px 16px">Las categorías que quites no borran sus gastos: pasarán a “Sin categoría”. Para renombrar una, créala nueva y recategoriza sus gastos.</div>
-      <div class="pc-grid2" style="grid-template-columns:1.4fr 1fr">
-        <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>🎮 Mis suscripciones</h2></div><table class="tbl grid"><thead><tr><th>Nombre</th><th class="r" style="width:130px">Importe/mes €</th><th style="width:80px">¿Activa?</th><th style="width:50px"></th></tr></thead><tbody>
-          ${(cfg.suscripciones || []).map((s, i) => `<tr><td><input type="text" class="cell" data-sub="${i}" data-f="nombre" value="${esc(s.nombre)}"></td><td><input type="number" step="0.01" min="0" class="cell r" data-sub="${i}" data-f="importe" value="${s.importe}"></td>
-            <td style="text-align:center"><input type="checkbox" data-sub="${i}" data-f="activa" ${s.activa !== false ? 'checked' : ''}></td><td class="acc"><button class="ib" data-subdel="${i}" title="Eliminar">🗑</button></td></tr>`).join('')}
-          <tr class="newrow"><td><input type="text" class="cell" id="pSubN" placeholder="➕ Netflix, móvil…"></td><td><input type="number" step="0.01" min="0" class="cell r" id="pSubI" placeholder="0,00"></td><td></td><td class="acc"><button class="ib add" id="pSubAdd" title="Añadir">＋</button></td></tr>
-          <tr class="tot"><td>TOTAL AL MES (solo las activas)</td><td class="r">${esc(fmt((cfg.suscripciones || []).filter((s) => s.activa !== false).reduce((a, s) => a + (Number(s.importe) || 0), 0)))}</td><td colspan="2"></td></tr></tbody></table></div>
-        <div>
-          <div class="card"><h2>🚀 Mis tipos de dinero extra</h2><div class="chips" style="margin-bottom:10px">${(cfg.tiposExtra || []).map((t, i) => `<span class="chip" style="font-size:14px;padding:7px 12px">${esc(t)} <button data-tdel="${i}" aria-label="Quitar" style="color:var(--bad);margin-left:6px">✕</button></span>`).join('') || '<span class="mut small">Aún no hay tipos.</span>'}</div>
-            <div style="display:flex;gap:8px"><input id="pTipoN" class="t" placeholder="➕ Nuevo tipo (ej. ⏱️ Horas extra)" style="padding:9px 12px;font-size:15px"><button class="ib add" id="pTipoAdd" style="width:44px;height:44px" title="Añadir">＋</button></div></div>
-          <div class="card"><h2>⏱️ Tarifa por hora</h2><label class="f">Lo que cobras por hora extra (€). Se rellena sola en Extras.</label><input id="pTarifa" type="number" step="0.01" min="0" class="t" value="${cfg.tarifaHora != null ? cfg.tarifaHora : ''}" placeholder="0,00" style="text-align:right"></div>
-        </div>
+
+      <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>🎮 Mis suscripciones y pagos periódicos</h2>
+        <div class="small mut" style="margin:-4px 0 10px">Mensuales, trimestrales, semestrales, anuales o <b>cada N meses</b>. Si la compartes, pon entre cuántas personas (tú incluido) y se cuenta solo <b>tu parte</b>. “Desde” es el mes de un cobro (el primero o cualquiera) y de ahí se cuentan los siguientes.</div>
+        <label class="f">Cómo contarlas en tu mes</label>
+        <select id="pModo" class="t pc-sel" style="margin-bottom:10px"><option value="prorrateo" ${modoCobro ? '' : 'selected'}>Repartidas: cada mes una parte (una anual de 120 € = 10 € al mes)</option><option value="cobro" ${modoCobro ? 'selected' : ''}>En el mes del cobro: el importe entero cuando toca (120 € en marzo)</option></select></div>
+        <table class="tbl grid"><thead><tr><th style="min-width:170px">Nombre</th><th class="r" style="width:110px">Importe del cobro €</th><th class="r" style="width:90px" title="1 = mensual · 3 = trimestral · 6 = semestral · 12 = anual · o los meses que sean">Cada (meses)</th><th class="r" style="width:90px">Personas</th><th class="r" style="width:100px">Tu parte €</th><th class="r" style="width:70px">Día</th><th style="width:140px">Desde</th><th style="min-width:190px">Categoría</th><th style="width:110px">Próximo cobro</th><th style="width:70px">¿Activa?</th><th style="width:50px"></th></tr></thead><tbody>
+        <tr class="newrow"><td><input type="text" class="cell" id="pSubN" placeholder="➕ Netflix, seguro, gym…"></td><td><input type="number" step="0.01" min="0" class="cell r" id="pSubI" placeholder="0,00"></td>
+          <td><input type="number" step="1" min="1" class="cell r" id="pSubC" value="1" list="pCadaDl"></td><td><input type="number" step="1" min="1" class="cell r" id="pSubP" value="1"></td><td></td>
+          <td><input type="number" step="1" min="1" max="31" class="cell r" id="pSubD" value="1"></td><td><input type="month" class="cell" id="pSubM" value="${mesActual}"></td>
+          <td><select class="cell" id="pSubK">${catOpts('')}</select></td><td></td><td></td><td class="acc"><button class="ib add" id="pSubAdd" title="Añadir">＋</button></td></tr>
+        ${subs.map((s, i) => { const nx = nextCharge(s); return `<tr class="${s.activa === false ? 'zero' : ''}"><td><input type="text" class="cell" data-sub="${i}" data-f="nombre" value="${esc(s.nombre)}"></td>
+          <td><input type="number" step="0.01" min="0" class="cell r" data-sub="${i}" data-f="importe" value="${s.importe}"></td>
+          <td><input type="number" step="1" min="1" class="cell r" data-sub="${i}" data-f="cada" value="${C.subEvery(s)}" list="pCadaDl" title="${esc(C.subPeriodo(s))}"></td>
+          <td><input type="number" step="1" min="1" class="cell r" data-sub="${i}" data-f="personas" value="${Math.max(1, Math.floor(Number(s.personas) || 1))}"></td>
+          <td class="r"><b>${esc(fmt(C.subShare(s)))}</b></td>
+          <td><input type="number" step="1" min="1" max="31" class="cell r" data-sub="${i}" data-f="dia" value="${s.dia || 1}"></td>
+          <td><input type="month" class="cell" data-sub="${i}" data-f="desde" value="${esc(s.desde || '')}"></td>
+          <td><select class="cell" data-sub="${i}" data-f="categoria">${catOpts(s.categoria || '')}</select></td>
+          <td class="mut">${nx ? esc(ddmm(nx.fecha)) + ' · ' + esc(fmt(nx.importe)) : '—'}</td>
+          <td style="text-align:center"><input type="checkbox" data-sub="${i}" data-f="activa" ${s.activa !== false ? 'checked' : ''}></td><td class="acc"><button class="ib" data-subdel="${i}" title="Eliminar">🗑</button></td></tr>`; }).join('')}
+        <tr class="tot"><td colspan="4">Cuentan en ${esc(C.monthLabel(mk))} (${modoCobro ? 'en el mes del cobro' : 'repartidas'})</td><td class="r">${esc(fmt(subTot))}</td><td colspan="6"></td></tr>
+        </tbody></table><datalist id="pCadaDl"><option value="1">mensual</option><option value="3">trimestral</option><option value="6">semestral</option><option value="12">anual</option></datalist></div>
+
+      <div class="pc-grid2" style="grid-template-columns:1fr 1fr">
+        <div class="card"><h2>🚀 Mis tipos de dinero extra</h2><div class="chips" style="margin-bottom:10px">${(cfg.tiposExtra || []).map((t, i) => `<span class="chip" style="font-size:14px;padding:7px 12px">${esc(t)} <button data-tdel="${i}" aria-label="Quitar" style="color:var(--bad);margin-left:6px">✕</button></span>`).join('') || '<span class="mut small">Aún no hay tipos.</span>'}</div>
+          <div style="display:flex;gap:8px"><input id="pTipoN" class="t" placeholder="➕ Nuevo tipo (ej. ⏱️ Horas extra)" style="padding:9px 12px;font-size:15px"><button class="ib add" id="pTipoAdd" style="width:44px;height:44px" title="Añadir">＋</button></div></div>
+        <div class="card"><h2>⏱️ Tarifa por hora</h2><label class="f">Lo que cobras por hora extra (€). Se rellena sola en Extras.</label><input id="pTarifa" type="number" step="0.01" min="0" class="t" value="${cfg.tarifaHora != null ? cfg.tarifaHora : ''}" placeholder="0,00" style="text-align:right"></div>
       </div>`;
+  }
+
+  /** Presupuestos pasados y próximos cobros: lo que conviene ver nada más abrir. */
+  function avisosCard(m) {
+    const al = C.budgetAlerts(m), prox = C.upcomingCharges(data().config, hoy(), 5), corto = (n) => String(n).replace(/\s*\(.*$/, '');
+    if (!al.length && !prox.length) return '';
+    return `<div class="pc-grid2" style="grid-template-columns:${al.length && prox.length ? '1fr 1fr' : '1fr'};margin-bottom:14px">
+      ${al.length ? `<div class="card" style="margin:0"><h2>🚦 Presupuestos</h2>${al.map((a) => `<div class="kv"><span>${a.nivel === 'pasado' ? '🚨' : '⚠️'} ${esc(corto(a.cat))}</span><b style="color:${a.nivel === 'pasado' ? 'var(--bad)' : 'var(--warn)'}">${Math.round(a.pct * 100)}% de ${esc(fmt(a.presupuesto))}</b></div>`).join('')}</div>` : ''}
+      ${prox.length ? `<div class="card" style="margin:0"><h2>🗓️ Próximos cobros</h2>${prox.map((p) => `<div class="kv"><span>${esc(p.nombre)} <span class="mut small">${esc(ddmm(p.fecha))}${p.personas > 1 ? ` · tu parte de ${esc(fmt(p.total))} entre ${p.personas}` : ''}${p.cada > 1 ? ' · ' + esc(C.subPeriodo({ cada: p.cada })) : ''}</span></span><b>${esc(fmt(p.importe))}</b></div>`).join('')}</div>` : ''}
+    </div>`;
+  }
+
+  /** Metas de ahorro con barra de progreso. */
+  function metasCard() {
+    const metas = data().config.metas || [], hm = C.monthKey(hoy());
+    return `<div class="card"><h2>🎯 Mis metas de ahorro</h2>
+      ${metas.map((g) => { const p = C.goalProgress(g, hm); return `<div style="margin-bottom:14px"><div class="kv" style="padding:0"><span><b>${esc(g.nombre)}</b> ${p.hecha ? '🎉' : ''}</span><b>${esc(fmt(g.aportado || 0))} <span class="mut small">de ${esc(fmt(g.objetivo))} · ${Math.round(p.pct * 100)}%</span></b></div>
+        <div class="goalbar"><i style="width:${(p.pct * 100).toFixed(1)}%"></i></div>
+        <div class="small mut" style="margin:4px 0 6px">${p.hecha ? '¡Conseguida!' : `Te faltan ${esc(fmt(p.falta))}`}${g.fecha ? ` · para ${esc(C.monthLabel(g.fecha))}${p.porMes != null && !p.hecha ? ` → ${esc(fmt(p.porMes))} al mes` : ''}` : ''}</div>
+        <div style="display:flex;gap:8px;align-items:center"><input type="number" step="0.01" min="0" class="t" data-mi="${esc(g.id)}" placeholder="Aportar €" style="max-width:150px;padding:8px 10px;font-size:15px;text-align:right"><button class="btn sec" data-maport="${esc(g.id)}" style="width:auto;min-height:38px;padding:6px 14px;font-size:14px">＋ Aportar</button><button class="ib" data-mdel="${esc(g.id)}" title="Eliminar meta">🗑</button></div></div>`; }).join('') || '<div class="mut small" style="margin-bottom:10px">Aún no tienes metas: un viaje, un móvil, un colchón de emergencia…</div>'}
+      <div class="pc-qrow" style="border-top:1px solid var(--line);padding-top:12px">
+        <div class="pc-grow"><label class="f">Nueva meta</label><input id="mNom" class="t" placeholder="Viaje a Japón"></div>
+        <div><label class="f">Objetivo €</label><input id="mObj" type="number" step="1" min="1" class="t" placeholder="500" style="text-align:right;max-width:130px"></div>
+        <div><label class="f">Para cuándo (opcional)</label><input id="mFec" type="month" class="t"></div>
+        <div class="pc-btns"><button class="btn pri" id="mAdd" type="button">🎯 Crear</button></div>
+      </div></div>`;
   }
 
   /* ------------------------------------------------------------------ render */
@@ -393,7 +447,7 @@
     if ((!FF.pcActive && !mpage) || view === 'ajustes') return;
     $$('#pcNav button[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === view));
     const keepScroll = window.scrollY;
-    pcMain.innerHTML = ({ cmd: cmdView, gastos: () => gastosView('gastos'), dev: devView, extras: extrasView, anio: anioView, ahorros: ahorrosView, deudas: deudasView, piloto: pilotoView }[view] || cmdView)();
+    pcMain.innerHTML = ({ cmd: cmdView, gastos: () => gastosView('gastos'), dev: devView, extras: extrasView, anio: anioView, ahorros: ahorrosView, deudas: deudasView, piloto: pilotoView, ...(FF.views || {}) }[view] || cmdView)();
     if (view === 'cmd') { fillDatalist(); }
     window.scrollTo(0, keepScroll);
   }
@@ -477,8 +531,15 @@
   }
   function subEdit(el) {
     const l = (data().config.suscripciones || []).map((x) => Object.assign({}, x)), s0 = l[+el.dataset.sub], f = el.dataset.f;
-    if (!s0) return;
-    if (f === 'importe') { const n = C.parseAmount(el.value); if (n == null || n < 0) { render(); return; } s0.importe = n; } else if (f === 'activa') s0.activa = el.checked; else s0.nombre = el.value.trim();
+    if (!s0 || !SUBF.includes(f)) return;
+    const num = (min, max) => { const n = C.parseAmount(el.value); if (n == null || n < min || (max && n > max)) return null; return Math.round(n); };
+    if (f === 'importe') { const n = C.parseAmount(el.value); if (n == null || n < 0) { FF.toast('Importe no válido'); render(); return; } s0.importe = n; }
+    else if (f === 'cada' || f === 'personas') { const n = num(1); if (n == null) { FF.toast('Pon un número de 1 en adelante'); render(); return; } s0[f] = n; }
+    else if (f === 'dia') { const n = num(1, 31); if (n == null) { FF.toast('El día va de 1 a 31'); render(); return; } s0.dia = n; }
+    else if (f === 'activa') s0.activa = el.checked;
+    else if (f === 'desde') s0.desde = /^\d{4}-\d{2}$/.test(el.value) ? el.value : '';
+    else if (f === 'categoria') s0.categoria = el.value;
+    else s0.nombre = el.value.trim() || s0.nombre;
     FF.setConfig('suscripciones', l); FF.toast('✓ Guardado'); now();
   }
 
@@ -526,10 +587,32 @@
     if (cd) { if (confirm(`¿Quitar “${cd.dataset.catdel}”? Sus gastos no se borran: pasarán a “Sin categoría”.`)) { FF.setConfig('categorias', catObjs().filter((c) => c.nombre !== cd.dataset.catdel)); now(); } return; }
     if (e.target.closest('#pSubAdd')) {
       const n = $('#pSubN').value.trim(), i = C.parseAmount($('#pSubI').value);
+      const cada = Math.round(C.parseAmount($('#pSubC').value) || 0), pers = Math.round(C.parseAmount($('#pSubP').value) || 0), dia = Math.round(C.parseAmount($('#pSubD').value) || 0);
       if (!n) return shake($('#pSubN'));
       if (i == null || i < 0) return shake($('#pSubI'));
-      FF.setConfig('suscripciones', (data().config.suscripciones || []).concat([{ nombre: n, importe: i, activa: true }])); return now();
+      if (cada < 1) return shake($('#pSubC'));
+      if (pers < 1) return shake($('#pSubP'));
+      if (dia < 1 || dia > 31) return shake($('#pSubD'));
+      const desde = /^\d{4}-\d{2}$/.test($('#pSubM').value) ? $('#pSubM').value : C.monthKey(hoy());
+      FF.setConfig('suscripciones', (data().config.suscripciones || []).concat([{ nombre: n, importe: i, cada, personas: pers, dia, desde, categoria: $('#pSubK').value, activa: true }]));
+      FF.toast('✓ Añadida'); return now();
     }
+    if (e.target.closest('#mAdd')) {
+      const n = $('#mNom').value.trim(), o = C.parseAmount($('#mObj').value), f = $('#mFec').value;
+      if (!n) return shake($('#mNom'));
+      if (o == null || o <= 0) return shake($('#mObj'));
+      FF.setConfig('metas', (data().config.metas || []).concat([{ id: C.uuid(), nombre: n, objetivo: o, aportado: 0, fecha: /^\d{4}-\d{2}$/.test(f) ? f : '' }]));
+      FF.toast('🎯 Meta creada'); return now();
+    }
+    const ma = e.target.closest('[data-maport]');
+    if (ma) {
+      const inp = $(`[data-mi="${ma.dataset.maport}"]`), v = C.parseAmount(inp.value);
+      if (v == null || v <= 0) return shake(inp);
+      FF.setConfig('metas', (data().config.metas || []).map((g) => (g.id === ma.dataset.maport ? { ...g, aportado: C.r2((Number(g.aportado) || 0) + v) } : g)));
+      FF.toast('✓ Aportado ' + esc(fmt(v))); return now();
+    }
+    const md = e.target.closest('[data-mdel]');
+    if (md) { if (confirm('¿Eliminar esta meta?')) { FF.setConfig('metas', (data().config.metas || []).filter((g) => g.id !== md.dataset.mdel)); now(); } return; }
     const sd = e.target.closest('[data-subdel]');
     if (sd) { FF.setConfig('suscripciones', (data().config.suscripciones || []).filter((_, i) => i !== +sd.dataset.subdel)); return now(); }
     if (e.target.closest('#pTipoAdd')) {
@@ -552,6 +635,13 @@
     const t = e.target;
     if (t.id === 'pcMes' || t.id === 'pcAnio') { const m = $('#pcMes').value.padStart(2, '0'), y = $('#pcAnio').value; FF.ui.mk = `${y}-${m}`; now(); return; }
     if (t.id === 'pMes' || t.id === 'pAnio') { st.pil = `${$('#pAnio').value}-${String($('#pMes').value).padStart(2, '0')}`; pending = false; return render(); }
+    if (t.id === 'pModo') { FF.setConfig('subsModo', t.value === 'cobro' ? 'cobro' : 'prorrateo'); FF.toast('✓ Guardado'); return now(); }
+    if (t.dataset.pres != null) {
+      const v = t.value.trim() === '' ? null : C.parseAmount(t.value);
+      if (v != null && v < 0) { FF.toast('Importe no válido'); return render(); }
+      FF.setConfig('categorias', catObjs().map((c) => (c.nombre === t.dataset.pres ? { ...c, presupuesto: v } : c)));
+      FF.toast(v == null ? '✓ Sin límite' : '✓ Presupuesto ' + esc(fmt(v))); pending = true; return;
+    }
     if (t.id === 'pTarifa') { const n = C.parseAmount(t.value); if (n != null && n >= 0) { FF.setConfig('tarifaHora', n); FF.toast('✓ Tarifa guardada'); } return; }
     if (t.dataset.pil != null) return pilotoEdit(t);
     if (t.dataset.sub != null) return subEdit(t);
@@ -605,7 +695,8 @@
     mas.innerHTML = `<h2>Más secciones</h2><div class="grid2" style="gap:10px">
       <button class="btn sec" data-page="dev">🔄 Devoluciones</button><button class="btn sec" data-page="extras">🚀 Extras</button>
       <button class="btn sec" data-page="ahorros">🏦 Ahorros</button><button class="btn sec" data-page="deudas">🤝 Deudas</button>
-      <button class="btn sec" data-page="piloto">⚙️ Piloto</button><button class="btn sec" data-page="gastos">📝 Gastos (tabla)</button></div>`;
+      <button class="btn sec" data-page="piloto">⚙️ Piloto</button><button class="btn sec" data-page="gastos">📝 Gastos (tabla)</button>
+      <button class="btn sec" data-page="graficos">📈 Gráficos</button><button class="btn sec" data-page="guia">📖 Empieza aquí</button></div>`;
     host.insertBefore(mas, host.firstElementChild);
     mas.addEventListener('click', (e) => { const b = e.target.closest('[data-page]'); if (b) openPage(b.dataset.page); });
     $('#sLayout', card).addEventListener('change', (e) => setPref(e.target.value));
