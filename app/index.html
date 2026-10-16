@@ -170,6 +170,18 @@ select.cell option{background:var(--card2)}
 .tbl.yr td,.tbl.yr th{padding:8px 10px;white-space:nowrap}
 .tbl.yr td:first-child,.tbl.yr th:first-child{position:sticky;left:0;background:var(--card);z-index:1}
 .tbl.yr th:first-child,.tbl.yr tr.tot td:first-child{background:var(--card2)}
+.pc-back{margin:0 0 12px;color:var(--blue);font-size:15px;padding:6px 0}
+body.pc .mobile-only{display:none}
+body.pm header#top,body.pm nav#tabs,body.pm main{display:none}
+body.pm #pcMain{display:block;margin:0;padding:calc(12px + var(--safe-t)) 12px 40px;max-width:none}
+body.pm .pc-cards,body.pm .pc-grid2{grid-template-columns:1fr!important}
+body.pm .pc-h h1{font-size:21px}
+body.pm .pc-hr{flex-wrap:wrap}
+body.pm .pc-qrow>div{flex:1 1 100%}
+body.pm .tbl{font-size:13px}
+body.pm .tbl.grid{min-width:640px}
+body.pm .pc-card .v{font-size:28px}
+.tbl input[type=checkbox]{width:20px;height:20px;accent-color:var(--acc)}
 @media (max-width:1250px){.pc-grid2{grid-template-columns:1fr}}
 @media (min-width:1000px){
   .sheet{left:50%;right:auto;bottom:auto;top:50%;transform:translate(-50%,-50%);width:min(620px,92vw);max-height:88vh;border-radius:20px;animation:none}

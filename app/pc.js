@@ -14,8 +14,8 @@
   let pref = 'auto';
   try { pref = localStorage.getItem(KEY) || 'auto'; } catch (e) { /* sin almacenamiento */ }
   let view = 'cmd';
-  let pending = false;
-  const st = { gMes: null, gQ: '', gLimit: 150, anio: new Date().getFullYear(), q: { imp: '', con: '', fec: '', tipo: 'Gasto', cat: '', auto: false }, x: { fec: '', tipo: '', imp: '', det: '' } };
+  let pending = false, mpage = false;
+  const st = { pil: null, gMes: null, gQ: '', gLimit: 150, anio: new Date().getFullYear(), q: { imp: '', con: '', fec: '', tipo: 'Gasto', cat: '', auto: false }, x: { fec: '', tipo: '', imp: '', det: '' } };
   const data = () => FF.data;
   const cats = () => FF.cats();
   const hoy = () => C.todayISO();
@@ -28,9 +28,13 @@
   nav.innerHTML = `<div class="pc-logo">💰 Finanzas</div>
     <button data-v="cmd">📊 Centro de Mando</button>
     <button data-v="gastos">📝 Gastos</button>
+    <button data-v="dev">🔄 Devoluciones</button>
     <button data-v="extras">🚀 Extras</button>
     <button data-v="anio">📅 Resumen del Año</button>
-    <button data-v="ajustes">⚙️ Ajustes</button>
+    <button data-v="ahorros">🏦 Ahorros</button>
+    <button data-v="deudas">🤝 Deudas</button>
+    <button data-v="piloto">⚙️ Piloto Automático</button>
+    <button data-v="ajustes">🔧 Ajustes y conexión</button>
     <div class="pc-foot"><span id="pcSync" class="chip">…</span><button id="pcToMobile" class="pc-link" type="button">📱 Ver como móvil</button></div>`;
   const pcMain = document.createElement('section');
   pcMain.id = 'pcMain'; pcMain.hidden = true;
@@ -38,6 +42,7 @@
 
   function apply() {
     const on = active();
+    if (on && mpage) closePage(true);
     FF.pcActive = on;
     document.body.classList.toggle('pc', on);
     nav.hidden = !on;
@@ -59,19 +64,18 @@
   FF.pcGo = (v) => { view = MAP[v] || v; apply(); window.scrollTo(0, 0); };
   FF.onNet = (t, k) => { const c = $('#pcSync'); if (c) { c.textContent = t; c.className = 'chip ' + k; } };
   FF.onRender = () => {
-    if (view === 'ajustes') return;
+    if (view === 'ajustes' || (!FF.pcActive && !mpage)) return;
     const a = document.activeElement;
     if (a && pcMain.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName)) { pending = true; return; }   // no interrumpir mientras escribes
     render();
   };
-  document.addEventListener('focusout', () => { if (pending) setTimeout(() => { const a = document.activeElement; if (!(a && pcMain.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName))) { pending = false; if (FF.pcActive && view !== 'ajustes') render(); } }, 120); });
+  document.addEventListener('focusout', () => { if (pending) setTimeout(() => { const a = document.activeElement; if (!(a && pcMain.contains(a) && /INPUT|SELECT|TEXTAREA/.test(a.tagName))) { pending = false; if ((FF.pcActive || mpage) && view !== 'ajustes') render(); } }, 120); });
   mq.addEventListener('change', apply);
 
   /* ------------------------------------------------------------------ piezas comunes */
   const semaforo = (m) => {
     const col = { verde: 'var(--acc)', amarillo: 'var(--warn)', rojo: 'var(--bad)', vacio: 'var(--line)' }[m.semaforo];
-    const msg = { vacio: '⏳ Sin datos todavía: configura tu sueldo en la hoja', rojo: m.queda < 0 ? `🚨 ¡TE QUEDAS SIN PASTA! Te pasas ${fmt(-m.queda)}` : '🚨 ¡TE QUEDAS SIN PASTA!',
-      amarillo: `⚠️ Ojo: te queda menos del 20% del sueldo (${Math.round(m.pctLibre * 100)}%)`, verde: `✅ Vas sobrado: te queda el ${Math.round(m.pctLibre * 100)}% del sueldo` }[m.semaforo];
+    const msg = C.semaforoMsg(m);
     const w = m.semaforo === 'vacio' ? 0 : Math.max(2, Math.min(100, m.pctLibre * 100));
     return `<div class="pc-bat"><div class="pc-batbar"><i style="width:${w.toFixed(1)}%;background:${col}"></i></div><div class="pc-batmsg" style="color:${m.semaforo === 'vacio' ? 'var(--mut)' : col}">${esc(msg)}</div></div>`;
   };
@@ -89,7 +93,22 @@
       <select id="pcAnio" class="t pc-sel">${yearsList().map((y) => `<option ${y === Y ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
   };
 
-  const head = (titulo, extra = '') => `<div class="pc-h"><h1>${titulo}</h1><div class="pc-hr">${extra}</div></div>`;
+  const head = (titulo, extra = '') => `${mpage ? '<button class="pc-back" id="pcBack" type="button">← Volver a Ajustes</button>' : ''}<div class="pc-h"><h1>${titulo}</h1><div class="pc-hr">${extra}</div></div>`;
+
+  /** En el móvil, las secciones de escritorio se abren como página completa desde Ajustes. */
+  function openPage(v) {
+    mpage = true; FF.pageOpen = true; view = v;
+    document.body.classList.add('pm');
+    $('main').hidden = true; pcMain.hidden = false;
+    render(); window.scrollTo(0, 0);
+  }
+  function closePage(silent) {
+    mpage = false; FF.pageOpen = false;
+    document.body.classList.remove('pm');
+    if (!FF.pcActive) { pcMain.hidden = true; $('main').hidden = false; }
+    if (!silent) FF.goMobile('set');
+  }
+  FF.closePage = closePage;
 
   /** gasto / devolución por categoría de un mes (para el desglose estilo Excel) */
   function catRows(mk, m) {
@@ -129,9 +148,10 @@
   function cmdView() {
     const mk = FF.ui.mk, m = C.computeMonth(data(), mk), cr = catRows(mk, m);
     const ex = {};
-    data().extras.filter((e) => C.monthKey(e.fecha) === mk).forEach((e) => { ex[e.tipo || 'Sin tipo'] = (ex[e.tipo || 'Sin tipo'] || 0) + e.importe; });
     const tipos = (data().config.tiposExtra || []).slice();
+    data().extras.filter((e) => C.monthKey(e.fecha) === mk).forEach((e) => { const k = tipos.includes(e.tipo) ? e.tipo : '❓ Extras sin tipo elegido'; ex[k] = C.r2((ex[k] || 0) + e.importe); });
     Object.keys(ex).forEach((t) => { if (!tipos.includes(t)) tipos.push(t); });
+    const apartado = C.r2(m.filas.filter((f) => /inversi|colch/i.test(f.cat)).reduce((a, f) => a + f.total, 0));
     const totalSale = cr.tot.neto > 0 ? cr.tot.neto : 0;
     return head('📊 Centro de Mando', monthSelect()) + `
       <div class="pc-cards">
@@ -140,6 +160,7 @@
         <div class="pc-card b"><div class="l">🔥 ME QUEDA LIBRE</div><div class="v" style="${m.queda < 0 ? 'color:var(--bad)' : ''}">${esc(fmt(m.queda))}</div><div class="s">Lo que entra menos lo que sale</div></div>
       </div>
       ${semaforo(m)}
+      ${apartado > 0 ? `<div class="small" style="margin:-6px 2px 14px;color:var(--acc2)">💪 De lo que sale, <b>${esc(fmt(apartado))}</b> es inversión y ahorro: no se pierde, es tuyo${m.entra > 0 ? ` (${Math.round((apartado / m.entra) * 100)}% de lo que entra)` : ''}.</div>` : ''}
       ${quickBar()}
       <div class="pc-grid2">
         <div class="card"><h2>1 · Lo que entra este mes</h2>
@@ -162,10 +183,11 @@
     return [...s].sort().reverse();
   }
 
-  function gastosFiltrados() {
+  function gastosFiltrados(kind) {
     const mes = st.gMes || FF.ui.mk;
     const q = C.norm(st.gQ);
     let lista = data().gastos.slice();
+    if (kind === 'dev') lista = lista.filter((g) => g.tipo === C.TIPO_DEV);
     if (mes !== 'todos') lista = lista.filter((g) => C.monthKey(g.fecha) === mes);
     if (q) lista = C.searchGastos(lista, st.gQ).map((r) => r.g);
     return lista.sort((a, b) => (a.fecha < b.fecha ? 1 : a.fecha > b.fecha ? -1 : 0));
@@ -185,10 +207,11 @@
       <td class="acc">${t ? `<button class="ib" data-tk="${esc(g.id)}" title="Ver el ticket desglosado">🧾</button>` : ''}<button class="ib" data-del="${esc(g.id)}" title="Eliminar">🗑</button></td></tr>`;
   }
 
-  function gastosView() {
-    const mes = st.gMes || FF.ui.mk, lista = gastosFiltrados(), vis = lista.slice(0, st.gLimit);
+  function gastosView(kind = 'gastos') {
+    const dev = kind === 'dev';
+    const mes = st.gMes || FF.ui.mk, lista = gastosFiltrados(kind), vis = lista.slice(0, st.gLimit);
     const opts = ['todos'].concat(mesesConDatos());
-    return head('📝 Gastos', `<select id="gMes" class="t pc-sel">${opts.map((o) => `<option value="${o}" ${o === mes ? 'selected' : ''}>${o === 'todos' ? 'Todos los meses' : C.monthLabel(o)}</option>`).join('')}</select>
+    return head(dev ? '🔄 Devoluciones' : '📝 Gastos', `<select id="gMes" class="t pc-sel">${opts.map((o) => `<option value="${o}" ${o === mes ? 'selected' : ''}>${o === 'todos' ? 'Todos los meses' : C.monthLabel(o)}</option>`).join('')}</select>
       <input id="gQ" class="t pc-sel" type="search" placeholder="🔎 Buscar (también dentro de tickets)" value="${esc(st.gQ)}" style="min-width:260px">`) + `
       <div class="card" style="padding:0;overflow:auto">
         <table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th style="min-width:260px">Categoría</th><th class="r" style="width:120px">Importe €</th><th style="width:140px">Tipo</th><th>Detalle</th><th style="width:90px"></th></tr></thead>
@@ -196,28 +219,32 @@
           <tr class="newrow"><td><input type="date" class="cell" id="nFec" value="${esc(st.q.fec || hoy())}"></td>
             <td><select class="cell" id="nCat"><option value="">— categoría —</option>${cats().map((c) => `<option>${esc(c)}</option>`).join('')}</select></td>
             <td><input type="number" step="0.01" min="0" class="cell r" id="nImp" placeholder="0,00"></td>
-            <td><select class="cell" id="nTipo"><option value="Gasto">Gasto</option><option value="${C.TIPO_DEV}">↩ Devolución</option></select></td>
+            <td><select class="cell" id="nTipo">${dev ? '' : '<option value="Gasto">Gasto</option>'}<option value="${C.TIPO_DEV}">↩ Devolución</option></select></td>
             <td><input type="text" class="cell" id="nDet" placeholder="Detalle (Enter para guardar)"></td>
             <td class="acc"><button class="ib add" id="nAdd" title="Añadir">＋</button></td></tr>
           ${vis.map(gastoRow).join('') || '<tr><td colspan="6" class="empty">Sin gastos en este periodo.</td></tr>'}
         </tbody>
-        <tfoot><tr class="tot"><td colspan="2">${lista.length} gasto${lista.length === 1 ? '' : 's'}${lista.length > vis.length ? ` (se muestran ${vis.length})` : ''}</td><td class="r" id="gTot">${esc(fmt(sumaNeta(lista)))}</td><td colspan="3" class="mut">Total neto (restando devoluciones)</td></tr></tfoot></table>
+        <tfoot><tr class="tot"><td colspan="2">${lista.length} gasto${lista.length === 1 ? '' : 's'}${lista.length > vis.length ? ` (se muestran ${vis.length})` : ''}</td><td class="r" id="gTot">${esc(fmt(dev ? C.r2(lista.reduce((a, g) => a + g.importe, 0)) : sumaNeta(lista)))}</td><td colspan="3" class="mut">${dev ? 'Total devuelto (resta de tu gasto)' : 'Total neto (restando devoluciones)'}</td></tr></tfoot></table>
       </div>
       ${lista.length > vis.length ? '<button class="btn sec" id="gMore" style="margin-top:12px;max-width:260px">Ver más</button>' : ''}`;
   }
 
   /* ------------------------------------------------------------------ 🚀 EXTRAS */
   function extrasView() {
-    const lista = data().extras.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-    const tipos = data().config.tiposExtra || [];
-    return head('🚀 Extras', '') + `<div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th style="min-width:240px">Tipo de extra</th><th class="r" style="width:130px">Importe €</th><th>Detalle</th><th style="width:60px"></th></tr></thead><tbody>
+    const lista = data().extras.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1)), vis = lista.slice(0, 200);
+    const tipos = data().config.tiposExtra || [], tarifa = data().config.tarifaHora;
+    return head('🚀 Extras · horas extra y otros trabajos') + `<div class="small mut" style="margin:0 4px 12px">Apunta aquí lo que ganas aparte del sueldo. Para horas: nº de horas × € por hora. Si es un pago cerrado, usa “Pago fijo”. También puedes combinar las dos.</div>
+      <div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th style="min-width:220px">Tipo de extra</th><th class="r" style="width:100px">Nº horas</th><th class="r" style="width:110px">€ por hora</th><th class="r" style="width:120px">Pago fijo €</th><th class="r" style="width:120px">Total</th><th>Detalle</th><th style="width:50px"></th></tr></thead><tbody>
       <tr class="newrow"><td><input type="date" class="cell" id="xFec" value="${esc(st.x.fec || hoy())}"></td>
         <td><select class="cell" id="xTipo"><option value="">— tipo —</option>${tipos.map((t) => `<option>${esc(t)}</option>`).join('')}</select></td>
+        <td><input type="number" step="0.25" min="0" class="cell r" id="xHor" placeholder="0"></td>
+        <td><input type="number" step="0.01" min="0" class="cell r" id="xTar" placeholder="0,00" value="${tarifa != null ? tarifa : ''}"></td>
         <td><input type="number" step="0.01" min="0" class="cell r" id="xImp" placeholder="0,00"></td>
+        <td class="r"><b id="xTot">0,00 €</b></td>
         <td><input type="text" class="cell" id="xDet" placeholder="Detalle (Enter para guardar)"></td>
         <td class="acc"><button class="ib add" id="xAdd" title="Añadir">＋</button></td></tr>
-      ${lista.map((e) => `<tr><td>${esc(e.fecha)}</td><td>${esc(e.tipo)}</td><td class="r">${esc(fmt(e.importe))}</td><td>${esc(e.detalle)}</td><td class="acc"><button class="ib" data-xdel="${esc(e.id)}" title="Eliminar">🗑</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Aún no hay extras.</td></tr>'}
-      </tbody><tfoot><tr class="tot"><td colspan="2">${lista.length} extra${lista.length === 1 ? '' : 's'}</td><td class="r">${esc(fmt(C.r2(lista.reduce((a, e) => a + e.importe, 0))))}</td><td colspan="2"></td></tr></tfoot></table></div>`;
+      ${vis.map((e) => `<tr><td>${esc(e.fecha)}</td><td colspan="4">${esc(e.tipo || '❓ sin tipo')}</td><td class="r"><b>${esc(fmt(e.importe))}</b></td><td>${esc(e.detalle)}</td><td class="acc"><button class="ib" data-xdel="${esc(e.id)}" title="Eliminar">🗑</button></td></tr>`).join('') || '<tr><td colspan="8" class="empty">Aún no hay extras.</td></tr>'}
+      </tbody><tfoot><tr class="tot"><td colspan="5">${lista.length} extra${lista.length === 1 ? '' : 's'}${lista.length > vis.length ? ` (se muestran ${vis.length})` : ''}</td><td class="r">${esc(fmt(C.r2(lista.reduce((a, e) => a + e.importe, 0))))}</td><td colspan="2"></td></tr></tfoot></table></div>`;
   }
 
   /* ------------------------------------------------------------------ 📅 RESUMEN DEL AÑO */
@@ -233,9 +260,17 @@
     ];
     const celda = (v, mk, neg) => `<td class="r ${mk > hoyMk ? 'fut' : ''}" ${neg && v < 0 ? 'style="color:var(--bad);font-weight:700"' : ''}>${v === 0 ? '<span class="mut">–</span>' : esc(fmt(v))}</td>`;
     const totalAnio = ms.reduce((a, m) => a + m.sale, 0);
+    const sv = C.savingsSeries(data(), `${Y}-12`), svBy = {}; sv.filas.forEach((f) => { svBy[f.mk] = f; });
+    const dash = (v, i, cls) => (v == null ? '<td class="r mut">–</td>' : `<td class="r ${meses[i] > hoyMk ? 'fut' : ''}">${esc(cls === 'pct' ? Math.round(v * 100) + '%' : fmt(v))}</td>`);
+    const svRows = sv.desde ? `
+        <tr class="ap"><td>📈 % del sueldo+extras</td>${ms.map((m, i) => dash(m.entra > 0 ? apart(m) / m.entra : null, i, 'pct')).join('')}<td></td></tr>
+        <tr class="g"><td>💰 Ahorrado en el mes</td>${meses.map((mk, i) => dash(svBy[mk] ? svBy[mk].ahorrado : null, i)).join('')}<td class="r"><b>${esc(fmt(C.r2(sv.filas.reduce((a, f) => a + f.ahorrado, 0))))}</b></td></tr>
+        <tr class="tot b"><td>🏦 MIS AHORROS A FINAL DE MES</td>${meses.map((mk, i) => dash(svBy[mk] ? svBy[mk].acumulado : null, i)).join('')}<td></td></tr>
+        <tr class="ap"><td>🌅 Empiezo el mes con (del mes anterior)</td>${meses.map((mk, i) => dash(svBy[mk] ? C.r2(svBy[mk].acumulado - svBy[mk].ahorrado) : null, i)).join('')}<td></td></tr>` : '';
     return head('📅 Resumen del Año', `<button class="nav-btn" data-y="-1" aria-label="Año anterior">‹</button><b style="min-width:60px;text-align:center;font-size:20px">${Y}</b><button class="nav-btn" data-y="1" aria-label="Año siguiente">›</button>`) + `
       <div class="card" style="padding:0;overflow:auto"><table class="tbl yr"><thead><tr><th style="min-width:250px">Concepto</th>${meses.map((mk, i) => `<th class="r">${mesCorto(i + 1)}</th>`).join('')}<th class="r">TOTAL ${Y}</th></tr></thead><tbody>
         ${filas.map(([n, f, cls]) => `<tr class="${cls}"><td>${esc(n)}</td>${ms.map((m, i) => celda(C.r2(f(m)), meses[i], cls.includes('b'))).join('')}<td class="r"><b>${esc(fmt(C.r2(ms.reduce((a, m) => a + f(m), 0))))}</b></td></tr>`).join('')}
+        ${svRows}
       </tbody></table></div>
       <div class="small mut" style="margin:8px 4px 16px">Los meses futuros (en cursiva) son una previsión: repiten tu sueldo y tus gastos fijos.</div>
       <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>🧾 Gasto por categoría en el año</h2></div><table class="tbl yr"><thead><tr><th style="min-width:250px">Categoría</th>${meses.map((mk, i) => `<th class="r">${mesCorto(i + 1)}</th>`).join('')}<th class="r">TOTAL</th><th class="r">%</th></tr></thead><tbody>
@@ -250,12 +285,108 @@
         <tr class="tot"><td>TOTAL QUE SALE</td>${ms.map((m, i) => celda(m.sale, meses[i], false)).join('')}<td class="r">${esc(fmt(C.r2(totalAnio)))}</td><td></td></tr></tbody></table></div>`;
   }
 
+  /* ------------------------------------------------------------------ 🔄 DEVOLUCIONES (misma tabla que Gastos, solo devoluciones) */
+  function devView() { return gastosView('dev'); }
+
+  /* ------------------------------------------------------------------ 🏦 AHORROS */
+  function ahorrosView() {
+    const [Y, M] = FF.ui.mk.split('-').map(Number), hoyMk = C.monthKey(hoy());
+    const a = data().config.ahorros || {}, ser = C.savingsSeries(data(), FF.ui.mk), all = C.savingsSeries(data(), `${Y}-12`);
+    const [dY, dM] = (a.desde || hoyMk).split('-').map(Number);
+    const por = {}; all.filas.forEach((f) => { por[f.mk] = f; });
+    const meses = Array.from({ length: 12 }, (_, i) => `${Y}-${String(i + 1).padStart(2, '0')}`);
+    const cell = (v, mk) => (v == null ? '<td class="r mut">–</td>' : `<td class="r ${mk > hoyMk ? 'fut' : ''}">${esc(fmt(v))}</td>`);
+    return head('🏦 Mis Ahorros', monthSelect()) + `
+      <div class="pc-cards">
+        <div class="pc-card g"><div class="l">🏦 MIS AHORROS (a final de ${esc(C.MESES[M - 1].toLowerCase())})</div><div class="v">${esc(fmt(ser.actual))}</div><div class="s">Se actualiza solo con lo que ahorras cada mes</div></div>
+        <div class="pc-card b"><div class="l">📈 AHORRADO EN EL AÑO (hasta ese mes)</div><div class="v">${esc(fmt(ser.enAnio))}</div><div class="s">Entra − sale + lo apartado (inversión + colchón)</div></div>
+        <div class="pc-card o"><div class="l">🧮 AHORRADO DESDE QUE EMPECÉ</div><div class="v">${esc(fmt(ser.desdeInicio))}</div><div class="s">Sin contar lo que ya tenías</div></div>
+      </div>
+      <div class="card"><h2>✍️ Solo 2 casillas</h2>
+        <div class="pc-qrow">
+          <div><label class="f">💰 Mis ahorros AHORA (€) — lo que tienes hoy</label><input id="aBase" type="number" step="0.01" class="t" value="${a.base != null ? a.base : ''}" placeholder="0 si empiezas de cero" style="text-align:right"></div>
+          <div><label class="f">📅 Empiezo a contar desde</label><div style="display:flex;gap:8px"><select id="aMes" class="t">${C.MESES.map((n, i) => `<option value="${i + 1}" ${i + 1 === dM ? 'selected' : ''}>${n}</option>`).join('')}</select>
+            <select id="aAnio" class="t">${yearsList().concat([dY]).filter((x, i, l) => l.indexOf(x) === i).sort().map((y) => `<option ${y === dY ? 'selected' : ''}>${y}</option>`).join('')}</select></div></div>
+          <div class="pc-btns"><button class="btn pri" id="aSave" type="button">💾 Guardar</button></div>
+        </div>
+        <p class="small mut" style="margin:10px 0 0">${a.desde ? '' : '⚠️ Aún no has puesto desde cuándo cuentas: sin eso no se calcula nada. '}Al cambiar de año los ahorros siguen: el 1 de enero empiezas con lo que tenías a 31 de diciembre.</p></div>
+      <div class="card" style="padding:0;overflow:auto"><table class="tbl yr"><thead><tr><th>${Y}</th><th class="r">💵 Entra</th><th class="r">💸 Sale</th><th class="r">💪 Apartado</th><th class="r">💰 Ahorrado en el mes</th><th class="r">🏦 Ahorros a final de mes</th></tr></thead><tbody>
+        ${meses.map((mk, i) => { const f = por[mk]; return `<tr><td>${esc(C.MESES[i])}</td>${cell(f ? f.entra : null, mk)}${cell(f ? f.sale : null, mk)}${cell(f ? f.apartado : null, mk)}${cell(f ? f.ahorrado : null, mk)}${cell(f ? f.acumulado : null, mk)}</tr>`; }).join('')}
+      </tbody></table></div>`;
+  }
+
+  /* ------------------------------------------------------------------ 🤝 DEUDAS */
+  function deudasView() {
+    const lista = data().config.deudas || [], t = C.debtTotals(lista);
+    const sec = (tipo, titulo, sub) => {
+      const filas = lista.filter((d) => d.tipo === tipo).sort((x, y) => (x.fecha < y.fecha ? 1 : -1));
+      return `<div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>${titulo}</h2><div class="small mut" style="margin:-4px 0 8px">${sub}</div></div>
+        <table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th>Persona</th><th>Motivo</th><th class="r" style="width:120px">Importe €</th><th class="r" style="width:150px">Devuelto hasta ahora €</th><th class="r" style="width:110px">Pendiente</th><th style="width:130px">Estado</th><th style="width:50px"></th></tr></thead><tbody>
+        <tr class="newrow" data-new="${tipo}"><td><input type="date" class="cell" data-n="fecha" value="${esc(hoy())}"></td><td><input type="text" class="cell" data-n="persona" placeholder="Quién"></td><td><input type="text" class="cell" data-n="motivo" placeholder="Motivo"></td>
+          <td><input type="number" step="0.01" min="0" class="cell r" data-n="importe" placeholder="0,00"></td><td><input type="number" step="0.01" min="0" class="cell r" data-n="devuelto" placeholder="0,00"></td><td></td><td></td><td class="acc"><button class="ib add" data-dadd="${tipo}" title="Añadir">＋</button></td></tr>
+        ${filas.map((d) => { const p = C.pendiente(d); return `<tr><td><input type="date" class="cell" data-d="${esc(d.id)}" data-f="fecha" value="${esc(d.fecha)}"></td><td><input type="text" class="cell" data-d="${esc(d.id)}" data-f="persona" value="${esc(d.persona)}"></td>
+          <td><input type="text" class="cell" data-d="${esc(d.id)}" data-f="motivo" value="${esc(d.motivo)}"></td><td><input type="number" step="0.01" min="0" class="cell r" data-d="${esc(d.id)}" data-f="importe" value="${d.importe}"></td>
+          <td><input type="number" step="0.01" min="0" class="cell r" data-d="${esc(d.id)}" data-f="devuelto" value="${d.devuelto || 0}"></td><td class="r"><b>${esc(fmt(p))}</b></td>
+          <td>${p <= 0 ? '✅ Saldado' : tipo === 'me_deben' ? '⏳ Me debe' : '⏳ Lo debo'}</td><td class="acc"><button class="ib" data-ddel="${esc(d.id)}" title="Eliminar">🗑</button></td></tr>`; }).join('') || '<tr><td colspan="8" class="empty">Nada apuntado.</td></tr>'}
+        </tbody></table></div>`;
+    };
+    return head('🤝 Deudas · quién me debe y a quién debo') + `
+      <div class="pc-cards">
+        <div class="pc-card g"><div class="l">🟢 ME DEBE (a mi favor)</div><div class="v">${esc(fmt(t.meDeben))}</div><div class="s">Lo que aún me tienen que devolver</div></div>
+        <div class="pc-card o"><div class="l">🔴 DEBO (a pagar)</div><div class="v">${esc(fmt(t.debo))}</div><div class="s">Lo que aún tengo que devolver</div></div>
+        <div class="pc-card b"><div class="l">⚖️ BALANCE</div><div class="v" style="${t.balance < 0 ? 'color:var(--bad)' : ''}">${esc(fmt(t.balance))}</div><div class="s">Positivo: te deben más de lo que debes</div></div>
+      </div>
+      <div class="small mut" style="margin:0 4px 12px">Cuando prestes dinero, apunta una línea. Cuando te lo devuelvan, súmalo en “Devuelto hasta ahora”: el pendiente se calcula solo.</div>
+      ${sec('me_deben', '🟢 1. Dinero que he prestado (me lo debe)', 'Quién me debe dinero')}
+      ${sec('debo', '🔴 2. Dinero que me han prestado (lo debo)', 'A quién debo dinero')}`;
+  }
+
+  /* ------------------------------------------------------------------ ⚙️ PILOTO (sueldo, fijos, suscripciones, tipos de extra) */
+  const catObjs = () => (data().config.categorias || []).map((c) => (typeof c === 'string' ? { nombre: c, presupuesto: null } : c));
+  const serieUpsert = (serie, mk, importe) => {
+    const s = (serie || []).filter((e) => e.desde !== mk);
+    s.push({ desde: mk, importe });
+    return s.sort((a, b) => (a.desde < b.desde ? -1 : 1));
+  };
+
+  function pilotoView() {
+    const mk = st.pil || FF.ui.mk, [Y, M] = mk.split('-').map(Number), cfg = data().config, ex = cfg.fuente === 'excel';
+    const sel = `<select id="pMes" class="t pc-sel">${C.MESES.map((n, i) => `<option value="${i + 1}" ${i + 1 === M ? 'selected' : ''}>${n}</option>`).join('')}</select>
+      <select id="pAnio" class="t pc-sel">${yearsList().concat([Y]).filter((x, i, l) => l.indexOf(x) === i).sort().map((y) => `<option ${y === Y ? 'selected' : ''}>${y}</option>`).join('')}</select>`;
+    const desdeDe = (serie) => { let b = null; (serie || []).forEach((e) => { if (e.desde <= mk && (!b || e.desde >= b.desde)) b = e; }); return b ? C.monthLabel(b.desde) : '—'; };
+    const inp = (key, serie) => `<input type="number" step="0.01" min="0" class="cell r" data-pil="${esc(key)}" value="${C.effectiveAt(serie, mk)}" ${ex ? 'disabled' : ''}>`;
+    if (ex) return head('⚙️ Piloto') + '<div class="card">Tu hoja está en <b>modo Excel</b>: el sueldo, los gastos fijos, las suscripciones y los tipos de extra se editan en la pestaña <b>⚙️ Piloto Automático</b> de tu Google Sheet y la app los lee de allí.</div>';
+    const cats = catObjs();
+    return head('⚙️ Piloto Automático · lo que se repite cada mes', `<span class="mut small">Los cambios valen a partir de:</span>${sel}`) + `
+      <div class="small mut" style="margin:0 4px 12px">Escribe el importe en el mes en el que cambia: <b>se queda así todos los meses siguientes</b> (igual que en el Excel). Para cambiarlo más adelante, elige ese mes arriba y escribe el nuevo importe.</div>
+      <div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="min-width:300px">Concepto</th><th class="r" style="width:170px">Importe/mes desde ${esc(C.MESES[M - 1].slice(0, 3))} ${Y}</th><th style="width:170px">Vigente desde</th><th style="width:50px"></th></tr></thead><tbody>
+        <tr><td><b>💵 Mi sueldo (lo que cobro cada mes)</b></td><td>${inp('__sueldo', cfg.sueldo)}</td><td class="mut">${esc(desdeDe(cfg.sueldo))}</td><td></td></tr>
+        ${cats.map((c) => /suscripci/i.test(c.nombre)
+    ? `<tr><td>${esc(c.nombre)}</td><td class="r mut">${esc(fmt((cfg.suscripciones || []).filter((s) => s.activa !== false).reduce((a, s) => a + (Number(s.importe) || 0), 0)))}</td><td class="mut">automático (tabla de abajo)</td><td></td></tr>`
+    : `<tr><td>${esc(c.nombre)}</td><td>${inp(c.nombre, (cfg.fijos || {})[c.nombre])}</td><td class="mut">${esc(desdeDe((cfg.fijos || {})[c.nombre]))}</td><td class="acc"><button class="ib" data-catdel="${esc(c.nombre)}" title="Quitar categoría">🗑</button></td></tr>`).join('')}
+        <tr class="newrow"><td><input type="text" class="cell" id="pCatNew" placeholder="➕ Nueva categoría (con emoji, ej. 🐶 Mascotas)"></td><td></td><td></td><td class="acc"><button class="ib add" id="pCatAdd" title="Añadir categoría">＋</button></td></tr>
+      </tbody></table></div>
+      <div class="small mut" style="margin:6px 4px 16px">Las categorías que quites no borran sus gastos: pasarán a “Sin categoría”. Para renombrar una, créala nueva y recategoriza sus gastos.</div>
+      <div class="pc-grid2" style="grid-template-columns:1.4fr 1fr">
+        <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>🎮 Mis suscripciones</h2></div><table class="tbl grid"><thead><tr><th>Nombre</th><th class="r" style="width:130px">Importe/mes €</th><th style="width:80px">¿Activa?</th><th style="width:50px"></th></tr></thead><tbody>
+          ${(cfg.suscripciones || []).map((s, i) => `<tr><td><input type="text" class="cell" data-sub="${i}" data-f="nombre" value="${esc(s.nombre)}"></td><td><input type="number" step="0.01" min="0" class="cell r" data-sub="${i}" data-f="importe" value="${s.importe}"></td>
+            <td style="text-align:center"><input type="checkbox" data-sub="${i}" data-f="activa" ${s.activa !== false ? 'checked' : ''}></td><td class="acc"><button class="ib" data-subdel="${i}" title="Eliminar">🗑</button></td></tr>`).join('')}
+          <tr class="newrow"><td><input type="text" class="cell" id="pSubN" placeholder="➕ Netflix, móvil…"></td><td><input type="number" step="0.01" min="0" class="cell r" id="pSubI" placeholder="0,00"></td><td></td><td class="acc"><button class="ib add" id="pSubAdd" title="Añadir">＋</button></td></tr>
+          <tr class="tot"><td>TOTAL AL MES (solo las activas)</td><td class="r">${esc(fmt((cfg.suscripciones || []).filter((s) => s.activa !== false).reduce((a, s) => a + (Number(s.importe) || 0), 0)))}</td><td colspan="2"></td></tr></tbody></table></div>
+        <div>
+          <div class="card"><h2>🚀 Mis tipos de dinero extra</h2><div class="chips" style="margin-bottom:10px">${(cfg.tiposExtra || []).map((t, i) => `<span class="chip" style="font-size:14px;padding:7px 12px">${esc(t)} <button data-tdel="${i}" aria-label="Quitar" style="color:var(--bad);margin-left:6px">✕</button></span>`).join('') || '<span class="mut small">Aún no hay tipos.</span>'}</div>
+            <div style="display:flex;gap:8px"><input id="pTipoN" class="t" placeholder="➕ Nuevo tipo (ej. ⏱️ Horas extra)" style="padding:9px 12px;font-size:15px"><button class="ib add" id="pTipoAdd" style="width:44px;height:44px" title="Añadir">＋</button></div></div>
+          <div class="card"><h2>⏱️ Tarifa por hora</h2><label class="f">Lo que cobras por hora extra (€). Se rellena sola en Extras.</label><input id="pTarifa" type="number" step="0.01" min="0" class="t" value="${cfg.tarifaHora != null ? cfg.tarifaHora : ''}" placeholder="0,00" style="text-align:right"></div>
+        </div>
+      </div>`;
+  }
+
   /* ------------------------------------------------------------------ render */
   function render() {
-    if (!FF.pcActive || view === 'ajustes') return;
+    if ((!FF.pcActive && !mpage) || view === 'ajustes') return;
     $$('#pcNav button[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === view));
     const keepScroll = window.scrollY;
-    pcMain.innerHTML = { cmd: cmdView, gastos: gastosView, extras: extrasView, anio: anioView }[view]();
+    pcMain.innerHTML = ({ cmd: cmdView, gastos: () => gastosView('gastos'), dev: devView, extras: extrasView, anio: anioView, ahorros: ahorrosView, deudas: deudasView, piloto: pilotoView }[view] || cmdView)();
     if (view === 'cmd') { fillDatalist(); }
     window.scrollTo(0, keepScroll);
   }
@@ -297,12 +428,51 @@
     setTimeout(() => { const i = $('#nImp'); if (i) i.focus(); }, 30);
   }
 
+  function totalExtraForm() {
+    const h = C.parseAmount($('#xHor').value), t = C.parseAmount($('#xTar').value), f = C.parseAmount($('#xImp').value);
+    return { h, t, f, total: C.extraAmount(h, t, f) };
+  }
+
   function nuevoExtra() {
-    const imp = C.parseAmount($('#xImp').value), tipo = $('#xTipo').value;
-    if (imp == null || imp <= 0) { shake($('#xImp')); return; }
+    const { h, t, f, total } = totalExtraForm(), tipo = $('#xTipo').value;
+    if (!(total > 0)) { shake($('#xHor').value ? $('#xTar') : $('#xImp')); FF.toast('Pon horas × tarifa o un pago fijo'); return; }
     if (!tipo) { shake($('#xTipo')); return; }
-    FF.addExtraRow({ id: C.uuid(), fecha: $('#xFec').value || hoy(), tipo, importe: imp, detalle: $('#xDet').value.trim() });
-    FF.toast('✓ Extra añadido'); pending = false; FF.renderAll();
+    const n2 = (x) => String(x).replace('.', ','), det = $('#xDet').value.trim(), horas = h > 0 && t > 0 ? `${n2(h)} h × ${n2(t)} €${f > 0 ? ' + ' + n2(f) + ' € fijos' : ''}` : '';
+    FF.addExtraRow({ id: C.uuid(), fecha: $('#xFec').value || hoy(), tipo, importe: total, detalle: [horas, det].filter(Boolean).join(' · ') });
+    if (t > 0 && t !== data().config.tarifaHora) FF.setConfig('tarifaHora', t);
+    FF.toast(`✓ Extra añadido: ${esc(fmt(total))}`); pending = false; FF.renderAll();
+  }
+
+  /* ---- deudas */
+  const deudas = () => (data().config.deudas || []).slice();
+  function deudaAdd(tipo) {
+    const tr = $(`tr[data-new="${tipo}"]`), v = (n) => $(`[data-n="${n}"]`, tr).value;
+    const imp = C.parseAmount(v('importe'));
+    if (imp == null || imp <= 0) { shake($('[data-n="importe"]', tr)); return; }
+    if (!v('persona').trim()) { shake($('[data-n="persona"]', tr)); return; }
+    FF.setConfig('deudas', deudas().concat([{ id: C.uuid(), tipo, fecha: v('fecha') || hoy(), persona: v('persona').trim(), motivo: v('motivo').trim(), importe: imp, devuelto: C.parseAmount(v('devuelto')) || 0 }]));
+    FF.toast('✓ Deuda apuntada'); pending = false; render();
+  }
+  function deudaEdit(el) {
+    const l = deudas(), d = l.find((x) => x.id === el.dataset.d), f = el.dataset.f;
+    if (!d) return;
+    if (f === 'importe' || f === 'devuelto') { const n = C.parseAmount(el.value); if (n == null || n < 0) { el.value = d[f]; return; } d[f] = n; } else d[f] = el.value;
+    FF.setConfig('deudas', l); pending = true; FF.toast('✓ Guardado');
+  }
+
+  /* ---- piloto */
+  function pilotoEdit(el) {
+    const cfg = data().config, mk = st.pil || FF.ui.mk, n = C.parseAmount(el.value);
+    if (n == null || n < 0) { FF.toast('Importe no válido'); render(); return; }
+    if (el.dataset.pil === '__sueldo') FF.setConfig('sueldo', serieUpsert(cfg.sueldo, mk, n));
+    else { const f = Object.assign({}, cfg.fijos || {}); f[el.dataset.pil] = serieUpsert(f[el.dataset.pil], mk, n); FF.setConfig('fijos', f); }
+    FF.toast(`✓ Desde ${esc(C.monthLabel(mk))}: ${esc(fmt(n))}`); pending = true;
+  }
+  function subEdit(el) {
+    const l = (data().config.suscripciones || []).map((x) => Object.assign({}, x)), s0 = l[+el.dataset.sub], f = el.dataset.f;
+    if (!s0) return;
+    if (f === 'importe') { const n = C.parseAmount(el.value); if (n == null || n < 0) { render(); return; } s0.importe = n; } else if (f === 'activa') s0.activa = el.checked; else s0.nombre = el.value.trim();
+    FF.setConfig('suscripciones', l); FF.toast('✓ Guardado'); pending = false; FF.renderAll();
   }
 
   function editarCampo(el) {
@@ -315,7 +485,7 @@
     g[f] = v; FF.persist(); FF.enqueue('update', { id: g.id, fields: { [f]: v } });
     if (f === 'categoria' && g.detalle) FF.learn(g.detalle, v);
     const tr = el.closest('tr'); if (tr && f === 'tipo') tr.classList.toggle('dev', v === C.TIPO_DEV);
-    const t = $('#gTot'); if (t) t.textContent = fmt(sumaNeta(gastosFiltrados()));
+    const t = $('#gTot'); if (t) { const l = gastosFiltrados(view === 'dev' ? 'dev' : 'gastos'); t.textContent = fmt(view === 'dev' ? C.r2(l.reduce((a, x) => a + x.importe, 0)) : sumaNeta(l)); }
     FF.toast('✓ Cambio guardado');
   }
 
@@ -329,7 +499,38 @@
   pcMain.addEventListener('click', (e) => {
     if (e.target.closest('#qSave')) return quickSave();
     if (e.target.closest('#qCam')) return $('#pcCam').click();
+    if (e.target.closest('#pcBack')) return closePage(false);
     if (e.target.closest('#nAdd')) return nuevaFila();
+    const da = e.target.closest('[data-dadd]'); if (da) return deudaAdd(da.dataset.dadd);
+    const dd = e.target.closest('[data-ddel]');
+    if (dd) { if (confirm('¿Eliminar esta deuda?')) { FF.setConfig('deudas', deudas().filter((x) => x.id !== dd.dataset.ddel)); pending = false; render(); } return; }
+    if (e.target.closest('#aSave')) {
+      const b = C.parseAmount($('#aBase').value);
+      FF.setConfig('ahorros', { base: b == null ? 0 : b, desde: `${$('#aAnio').value}-${String($('#aMes').value).padStart(2, '0')}` });
+      FF.toast('✓ Ahorros guardados'); pending = false; return render();
+    }
+    if (e.target.closest('#pCatAdd')) {
+      const n = $('#pCatNew').value.trim();
+      if (!n) return shake($('#pCatNew'));
+      if (cats().some((c) => C.norm(c) === C.norm(n))) { FF.toast('Esa categoría ya existe'); return; }
+      FF.setConfig('categorias', catObjs().concat([{ nombre: n, presupuesto: null }])); FF.toast('✓ Categoría añadida'); pending = false; return FF.renderAll();
+    }
+    const cd = e.target.closest('[data-catdel]');
+    if (cd) { if (confirm(`¿Quitar “${cd.dataset.catdel}”? Sus gastos no se borran: pasarán a “Sin categoría”.`)) { FF.setConfig('categorias', catObjs().filter((c) => c.nombre !== cd.dataset.catdel)); pending = false; FF.renderAll(); } return; }
+    if (e.target.closest('#pSubAdd')) {
+      const n = $('#pSubN').value.trim(), i = C.parseAmount($('#pSubI').value);
+      if (!n) return shake($('#pSubN'));
+      if (i == null || i < 0) return shake($('#pSubI'));
+      FF.setConfig('suscripciones', (data().config.suscripciones || []).concat([{ nombre: n, importe: i, activa: true }])); pending = false; return FF.renderAll();
+    }
+    const sd = e.target.closest('[data-subdel]');
+    if (sd) { FF.setConfig('suscripciones', (data().config.suscripciones || []).filter((_, i) => i !== +sd.dataset.subdel)); pending = false; return FF.renderAll(); }
+    if (e.target.closest('#pTipoAdd')) {
+      const n = $('#pTipoN').value.trim(); if (!n) return shake($('#pTipoN'));
+      FF.setConfig('tiposExtra', (data().config.tiposExtra || []).concat([n])); pending = false; return FF.renderAll();
+    }
+    const td = e.target.closest('[data-tdel]');
+    if (td) { FF.setConfig('tiposExtra', (data().config.tiposExtra || []).filter((_, i) => i !== +td.dataset.tdel)); pending = false; return FF.renderAll(); }
     if (e.target.closest('#xAdd')) return nuevoExtra();
     if (e.target.closest('#gMore')) { st.gLimit += 150; return render(); }
     const y = e.target.closest('button[data-y]'); if (y) { st.anio += +y.dataset.y; return render(); }
@@ -343,6 +544,11 @@
   pcMain.addEventListener('change', (e) => {
     const t = e.target;
     if (t.id === 'pcMes' || t.id === 'pcAnio') { const m = $('#pcMes').value.padStart(2, '0'), y = $('#pcAnio').value; FF.ui.mk = `${y}-${m}`; pending = false; FF.renderAll(); return; }
+    if (t.id === 'pMes' || t.id === 'pAnio') { st.pil = `${$('#pAnio').value}-${String($('#pMes').value).padStart(2, '0')}`; pending = false; return render(); }
+    if (t.id === 'pTarifa') { const n = C.parseAmount(t.value); if (n != null && n >= 0) { FF.setConfig('tarifaHora', n); FF.toast('✓ Tarifa guardada'); } return; }
+    if (t.dataset.pil != null) return pilotoEdit(t);
+    if (t.dataset.sub != null) return subEdit(t);
+    if (t.dataset.d && t.dataset.f) return deudaEdit(t);
     if (t.id === 'gMes') { st.gMes = t.value; st.gLimit = 150; pending = false; return render(); }
     if (t.id === 'qFec') { st.q.fec = t.value; return; }
     if (t.id === 'qTipo') { st.q.tipo = t.value; st.q.cat = ''; st.q.auto = false; pending = false; return render(); }
@@ -353,6 +559,7 @@
 
   pcMain.addEventListener('input', (e) => {
     const t = e.target;
+    if (t.id === 'xHor' || t.id === 'xTar' || t.id === 'xImp') { const o = $('#xTot'); if (o) o.textContent = fmt(totalExtraForm().total); return; }
     if (t.id === 'qImp') st.q.imp = t.value;
     else if (t.id === 'qCon') {
       st.q.con = t.value; fillDatalist();
@@ -372,7 +579,7 @@
     const id = e.target.id;
     if (id === 'qImp' || id === 'qCon' || id === 'qFec') { e.preventDefault(); if (id === 'qImp' && !st.q.con) { $('#qCon').focus(); return; } quickSave(); }
     else if (id === 'nDet' || id === 'nImp') { e.preventDefault(); nuevaFila(); }
-    else if (id === 'xDet' || id === 'xImp') { e.preventDefault(); nuevoExtra(); }
+    else if (id === 'xDet' || id === 'xImp' || id === 'xHor' || id === 'xTar') { e.preventDefault(); nuevoExtra(); }
   });
 
   /* ------------------------------------------------------------------ preferencia de vista (Ajustes) */
@@ -385,6 +592,14 @@
     card.innerHTML = `<h2>Vista</h2><select id="sLayout" class="t"><option value="auto">Automática (escritorio en pantallas anchas)</option><option value="pc">Siempre escritorio</option><option value="mobile">Siempre móvil</option></select>
       <p class="small mut" style="margin:10px 0 0">La vista de escritorio muestra tu Centro de Mando, la tabla de gastos editable y el resumen del año, parecido a tu Excel.</p>`;
     host.insertBefore(card, host.firstElementChild);
+    const mas = document.createElement('div');
+    mas.className = 'card mobile-only';
+    mas.innerHTML = `<h2>Más secciones</h2><div class="grid2" style="gap:10px">
+      <button class="btn sec" data-page="dev">🔄 Devoluciones</button><button class="btn sec" data-page="extras">🚀 Extras</button>
+      <button class="btn sec" data-page="ahorros">🏦 Ahorros</button><button class="btn sec" data-page="deudas">🤝 Deudas</button>
+      <button class="btn sec" data-page="piloto">⚙️ Piloto</button><button class="btn sec" data-page="gastos">📝 Gastos (tabla)</button></div>`;
+    host.insertBefore(mas, host.firstElementChild);
+    mas.addEventListener('click', (e) => { const b = e.target.closest('[data-page]'); if (b) openPage(b.dataset.page); });
     $('#sLayout', card).addEventListener('change', (e) => setPref(e.target.value));
   })();
 

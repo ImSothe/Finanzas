@@ -241,6 +241,8 @@ function xlReadExtras_() {
 }
 
 /* Configuración: se LEE de tu pestaña Piloto (valores ya calculados: la herencia mes a mes la hace la propia hoja). */
+var XL_EXTRA_KEYS = ['deudas', 'ahorros', 'tarifaHora'];
+
 function xlReadConfig_() {
   var sh = xlSheet_(XL.piloto);
   var maxR = Math.min(sh.getMaxRows(), 100), maxC = Math.min(sh.getMaxColumns(), 99);
@@ -284,7 +286,15 @@ function xlReadConfig_() {
   var extHdr = find(function (t) { return t.indexOf('Nombre (') === 0; }, totRow);
   var tipos = [];
   if (extHdr >= 0) for (var t = extHdr + 1; t <= extHdr + 6 && t < v.length; t++) if (v[t][1]) tipos.push(String(v[t][1]));
-  return { categorias: categorias, sueldo: serie(sueldoRow), fijos: fijos, suscripciones: subs, tiposExtra: tipos, moneda: '€', fuente: 'excel' };
+  var out = { categorias: categorias, sueldo: serie(sueldoRow), fijos: fijos, suscripciones: subs, tiposExtra: tipos, moneda: '€', fuente: 'excel' };
+  var extra = SpreadsheetApp.getActive().getSheetByName(SH.config);       // lo que la app guarda además de tu Piloto: deudas, ahorros, tarifa por hora
+  if (extra && extra.getLastRow() > 1) {
+    extra.getRange(2, 1, extra.getLastRow() - 1, 2).getValues().forEach(function (r) {
+      if (XL_EXTRA_KEYS.indexOf(String(r[0])) < 0) return;
+      try { out[String(r[0])] = JSON.parse(String(r[1])); } catch (e) { /* valor ilegible: se ignora */ }
+    });
+  }
+  return out;
 }
 
 /* Huella para saber si algo cambió (el contador de la app consulta esto cada 30 s). */
@@ -568,9 +578,12 @@ function dictDel_(k) { return deleteById_(SH.dic, 1, str_(k, 120)); }
 function configSet_(key, value) {
   key = str_(key, 60);
   if (!/^[a-zA-Z][a-zA-Z0-9_]*$/.test(key)) throw new Error('Clave de configuración inválida');
-  var sh = SpreadsheetApp.getActive().getSheetByName(SH.config);
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(SH.config) || ensureSheet_(ss, SH.config, ['Clave', 'Valor (JSON)'], {}, [160, 700]);
   var row = findRow_(sh, 1, key);
   var txt = JSON.stringify(value);
+  if (txt.length > 45000) throw new Error('Configuración demasiado grande para una celda');
   if (row > 0) sh.getRange(row, 2).setValue(txt); else sh.appendRow([key, txt]);
+  bump_();
   return { saved: 1 };
 }

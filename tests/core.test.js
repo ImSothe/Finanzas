@@ -54,15 +54,18 @@ test('computeMonth: gasto con categoría desconocida cae en "Sin categoría" y e
   assert.equal(m.filas.reduce((a, f) => a + f.total, 0), m.sale);
 });
 
-test('semáforo: vacío, rojo (0 o negativo), amarillo (<20%) y verde', () => {
+test('semáforo: vacío, verde (<50 % gastado), amarillo (≥50 %), rojo (≥80 % o sin pasta)', () => {
+  const cfg = { sueldo: [{ desde: '2026-01', importe: 100 }], fijos: {}, suscripciones: [] };
+  const con = (imp) => C.computeMonth(mkData({ config: cfg, gastos: [g('2026-07-01', CATS[1], imp)] }), '2026-07');
   assert.equal(C.computeMonth(mkData({ config: { sueldo: [], fijos: {}, suscripciones: [] } }), '2026-01').semaforo, 'vacio');
-  const rojo = C.computeMonth(mkData({ gastos: [g('2026-07-01', CATS[1], 5000)] }), '2026-07');
-  assert.equal(rojo.semaforo, 'rojo');
-  const exacto = C.computeMonth(mkData({ config: { sueldo: [{ desde: '2026-01', importe: 100 }], fijos: {}, suscripciones: [] }, gastos: [g('2026-07-01', CATS[1], 100)] }), '2026-07');
-  assert.equal(exacto.queda, 0);
-  assert.equal(exacto.semaforo, 'rojo');
-  const amar = C.computeMonth(mkData({ config: { sueldo: [{ desde: '2026-01', importe: 100 }], fijos: {}, suscripciones: [] }, gastos: [g('2026-07-01', CATS[1], 85)] }), '2026-07');
-  assert.equal(amar.semaforo, 'amarillo');
+  assert.equal(con(49).semaforo, 'verde');
+  assert.equal(con(50).semaforo, 'amarillo');
+  assert.equal(con(79).semaforo, 'amarillo');
+  assert.equal(con(80).semaforo, 'rojo');                 // a partir del 80 % ya es alarma
+  assert.equal(con(100).semaforo, 'rojo');
+  assert.equal(C.computeMonth(mkData({ gastos: [g('2026-07-01', CATS[1], 5000)] }), '2026-07').semaforo, 'rojo');
+  assert.match(C.semaforoMsg(con(66)), /66%/);
+  assert.match(C.semaforoMsg(con(150)), /SIN PASTA/);
 });
 
 test('shiftMonth cruza años en ambos sentidos', () => {
