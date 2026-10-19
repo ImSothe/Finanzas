@@ -80,3 +80,13 @@ test('normConfig limpia sueldoCuenta, autoDesde, aplicados y la cuenta de una su
   assert.equal(c.suscripciones[0].cuenta, 'ok_1'); assert.equal(c.suscripciones[1].cuenta, undefined);
   assert.deepEqual(C.normConfig({ sueldoCuenta: { id: 'n', dia: 99 } }).sueldoCuenta, { id: 'n', dia: 31 });
 });
+
+test('config.pin: solo se acepta una huella v2 bien formada y nunca va en las copias de seguridad', () => {
+  const ok = { v: 2, s: 'a'.repeat(32), i: 210000, h: 'b'.repeat(64) };
+  assert.deepEqual(C.normConfig({ pin: ok }).pin, ok);
+  assert.equal(C.normConfig({ pin: { ...ok, h: 'zz' } }).pin, undefined);
+  assert.equal(C.normConfig({ pin: '1234' }).pin, undefined);
+  assert.equal(C.normConfig({ pin: null }).pin, null);
+  const b = C.makeBackup({ config: { pin: ok, sueldo: [] }, diccionario: [], gastos: [], extras: [] });
+  assert.equal(JSON.parse(JSON.stringify(b)).config.pin, undefined);
+});

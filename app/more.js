@@ -167,6 +167,16 @@
   });
   if (getPin() && subtle) showLock(); else document.documentElement.classList.remove('locked');
 
+  /** PIN compartido entre tus dispositivos: se guarda en tu hoja SOLO como huella con sal (PBKDF2), nunca el PIN. Quien tenga tu token ya puede leer tus datos,
+      así que esto no le da más; el PIN solo cierra la pantalla. Al sincronizar: si la hoja tiene un PIN distinto, este dispositivo lo adopta; si lo quitaste en otro, se quita. */
+  FF.pinSync = () => {
+    if (!subtle || !FF.configured()) return;
+    const remote = data().config.pin, local = getPin();
+    if (remote === undefined) { if (local && local.v === 2) FF.setConfig('pin', { v: 2, s: local.s, i: local.i, h: local.h }); return; }   // el primero que lo sube
+    if (remote === null) { if (local) { try { localStorage.removeItem('ff.pin'); } catch (e) { /* nada */ } hideLock(); paintPin(); } return; }
+    if (!local || local.h !== remote.h || local.s !== remote.s) { lsSet('ff.pin', JSON.stringify(remote)); failSave({ n: 0, until: 0 }); paintPin(); FF.toast('🔒 PIN sincronizado desde tu hoja'); if (document.hidden === false && !local) showLock(); }
+  };
+
   /* ------------------------------------------------------------------ 💾 COPIA DE SEGURIDAD */
   function downloadBackup() {
     const b = C.makeBackup({ config: data().config, diccionario: data().diccionario, gastos: data().gastos, extras: data().extras });
@@ -235,7 +245,7 @@
     const box = $('#pinBox', card); if (!box) return;
     if (!subtle) { box.innerHTML = '<div class="small mut">Tu navegador no permite el candado (necesita una conexión segura https).</div>'; return; }
     const on = !!getPin();
-    box.innerHTML = `<div class="small mut" style="margin-bottom:8px">${on ? '🔒 Activado: se pide el PIN al abrir la app y al volver tras un minuto fuera.' : 'Pide un PIN al abrir la app. Protege de miradas curiosas (los datos del navegador no están cifrados).'}</div>
+    box.innerHTML = `<div class="small mut" style="margin-bottom:8px">${on ? '🔒 Activado: se pide el PIN al abrir la app y al volver tras un minuto fuera. Con tu hoja conectada se comparte entre tus dispositivos.' : 'Pide un PIN al abrir la app. Protege de miradas curiosas (los datos del navegador no están cifrados).'}</div>
       <div style="display:flex;gap:8px;flex-wrap:wrap"><input id="pinNew" class="t" type="password" inputmode="numeric" maxlength="8" autocomplete="off" placeholder="${on ? 'Nuevo PIN (4-8 cifras)' : 'Elige un PIN (4-8 cifras)'}" style="max-width:220px"><button class="btn sec" id="pinSet" style="width:auto;min-height:48px;padding:8px 16px;font-size:15px">${on ? 'Cambiar' : 'Activar'}</button>${on ? '<button class="btn sec" id="pinOff" style="width:auto;min-height:48px;padding:8px 16px;font-size:15px">Quitar</button>' : ''}</div>`;
   }
   function paintBackup() {
@@ -249,9 +259,9 @@
       const v = $('#pinNew', card).value;
       if (!okPin(v)) { FF.toast('El PIN son de 4 a 8 cifras'); return; }
       if (pinFlojo(v)) { FF.toast('Ese PIN es demasiado fácil de adivinar (0000, 1234…). Elige otro.'); return; }
-      lsSet('ff.pin', JSON.stringify(await makePin(v))); failSave({ n: 0, until: 0 }); paintPin(); FF.toast('🔒 PIN activado'); return;
+      const np = await makePin(v); lsSet('ff.pin', JSON.stringify(np)); failSave({ n: 0, until: 0 }); if (FF.configured()) FF.setConfig('pin', np); paintPin(); FF.toast(FF.configured() ? '🔒 PIN activado en todos tus dispositivos' : '🔒 PIN activado'); return;
     }
-    if (e.target.closest('#pinOff')) { if (confirm('¿Quitar el PIN?')) { try { localStorage.removeItem('ff.pin'); } catch (er) { /* nada */ } paintPin(); FF.toast('PIN quitado'); } return; }
+    if (e.target.closest('#pinOff')) { if (confirm('¿Quitar el PIN?')) { try { localStorage.removeItem('ff.pin'); } catch (er) { /* nada */ } if (FF.configured()) FF.setConfig('pin', null); paintPin(); FF.toast('PIN quitado'); } return; }
     if (e.target.closest('#dgBtn')) return runDiagnose();
     if (e.target.closest('#bkDown')) return downloadBackup();
     if (e.target.closest('#bkUp')) return $('#bkIn', card).click();

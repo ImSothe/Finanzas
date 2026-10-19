@@ -137,7 +137,7 @@
   }
   /** Copia de seguridad completa (JSON) y su restauración: solo añade lo que falta, nunca duplica por id. */
   function makeBackup(data) {
-    return { app: 'FinanzasApp', v: 1, creado: new Date().toISOString(), config: data.config || {}, diccionario: data.diccionario || [], gastos: data.gastos || [], extras: data.extras || [] };
+    return { app: 'FinanzasApp', v: 1, creado: new Date().toISOString(), config: Object.assign({}, data.config || {}, { pin: undefined }), diccionario: data.diccionario || [], gastos: data.gastos || [], extras: data.extras || [] };
   }
   const cleanGasto = (g) => {
     if (!g || typeof g !== 'object' || !idOk(g.id) || !ymdOk(g.fecha) || !Number.isFinite(Number(g.importe)) || Number(g.importe) < 0) return null;
@@ -335,6 +335,10 @@
     if (c.cuentas !== undefined) c.cuentas = arr(c.cuentas).map(cleanCuenta).filter(Boolean).slice(0, 100);
     if (c.sueldoCuenta !== undefined) { const sc = c.sueldoCuenta; if (sc && typeof sc === 'object' && !Array.isArray(sc) && idOk(sc.id)) c.sueldoCuenta = { id: sc.id, dia: Math.max(1, Math.min(31, Math.round(fin(sc.dia, 1)))) }; else delete c.sueldoCuenta; }
     if (c.autoDesde !== undefined && !ymdOk(c.autoDesde)) delete c.autoDesde;
+    if (c.pin !== undefined && c.pin !== null) {
+      const p = c.pin;
+      if (p && typeof p === 'object' && p.v === 2 && /^[0-9a-f]{32}$/.test(String(p.s)) && /^[0-9a-f]{64}$/.test(String(p.h))) c.pin = { v: 2, s: p.s, i: Math.min(1e6, Math.max(1000, Math.round(fin(p.i, 210000)))), h: p.h }; else delete c.pin;
+    }
     if (c.aplicados !== undefined) c.aplicados = [...new Set(arr(c.aplicados).map((k) => str(k, 140)).filter(Boolean))].slice(-800);
     if (c.nominas !== undefined) c.nominas = [...new Set(arr(c.nominas).map(ymOk).filter(Boolean))].sort().slice(-120);
     if (c.cuentasHist !== undefined) c.cuentasHist = arr(c.cuentasHist).map(cleanHist).filter(Boolean).slice(-400);
