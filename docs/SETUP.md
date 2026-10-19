@@ -41,6 +41,8 @@ Open **https://sheets.new** and name it. Use a personal Google account; with sev
 2. Paste the **URL** and the **token** (no leading/trailing spaces).
 3. **Probar** must say **✅ Conectado correctamente**. Then **Sincronizar**.
 
+<img src="img/07-ajustes-conexion.png" width="300" alt="Settings: connection with your Google Sheet">
+
 ## 6 · Your phone
 On the PC: **Ajustes → 🔗 Enlace para configurar otro móvil**. Send the link to yourself (never share it: it contains your token) and open it on the phone → **Conectar**.
 

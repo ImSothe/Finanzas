@@ -25,7 +25,7 @@
     '🏍️ Moto (gasolina, taller, equipación)', '🚌 Transporte público y otros', '👕 Ropa y calzado', '🍻 Ocio, cenas y salidas',
     '🏥 Salud y cuidado personal', '🎁 Regalos y caprichos', '🎮 Suscripciones', '📈 Inversión',
     '🛡️ Colchón / ahorro', '🕹️ Hobbys y videojuegos', '🖥️ Decoración, periféricos y gaming', '📑 Multas',
-    '🧾 Trámites', '🗂️ Gestoría', '📦 Otros'];
+    '🧾 Trámites', '🗂️ Gestoría', '🐾 Mascota (comida, veterinario, accesorios)', '📦 Otros'];
 
   data.config = C.normConfig(data.config);                                    // también lo guardado de otras sesiones
   const cats = () => (Array.isArray(data.config.categorias) ? data.config.categorias : []).map((c) => (typeof c === 'string' ? c : c.nombre));

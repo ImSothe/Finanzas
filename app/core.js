@@ -488,6 +488,7 @@
   const CAT_HINTS = [
     [/coche/i, 'gasolina, aceite de motor, lavado, neumáticos, recambios, ITV, seguro del coche'],
     [/moto/i, 'gasolina moto, aceite de moto, casco, guantes, equipación'],
+    [/mascota/i, 'pienso, comida de perro o gato, veterinario, arena, juguetes, collar, peluquería canina'],
     [/supermercado|comida/i, 'comida, bebida, aceite de cocina, limpieza y papel del hogar'],
     [/luz|agua|internet/i, 'recibos de luz, agua, gas, internet y teléfono'],
     [/transporte p/i, 'bus, metro, tren, taxi, billetes'],

@@ -45,6 +45,8 @@ Abre **https://sheets.new**. Ponle un nombre (por ejemplo «Finanzas»). Usa tu 
 3. Pulsa **Probar**. Debe decir **✅ Conectado correctamente**.
 4. Pulsa **Sincronizar**.
 
+<img src="img/07-ajustes-conexion.png" width="300" alt="Ajustes: conexión con tu hoja de Google">
+
 ## Paso 6 · El móvil
 En el PC: **Ajustes → 🔗 Enlace para configurar otro móvil**. Cópialo, mándatelo a ti mismo (no lo compartas: lleva tu token) y ábrelo en el móvil → **Conectar**.
 Para instalarla: Android/Chrome ⋮ → *Instalar app*; iPhone/Safari → Compartir → *Añadir a pantalla de inicio*.

@@ -19,6 +19,22 @@ App web (PWA) para llevar tus gastos sin pereza, conectada a **Google Sheets**:
   Gemini API (gemini-2.5-flash)
 ```
 
+## Capturas
+
+*Solo datos de demostración.*
+
+| Centro de Mando (PC) | Gastos con la cuenta de pago |
+|---|---|
+| ![Centro de Mando](docs/img/02-centro-de-mando.png) | ![Gastos](docs/img/03-gastos-cuenta.png) |
+
+| Mi dinero (cuentas y saldos) | Planning e inversión |
+|---|---|
+| ![Mi dinero](docs/img/04-mi-dinero.png) | ![Planning](docs/img/05-planning.png) |
+
+| Móvil: apuntar un gasto | Ajustes: conectar tu hoja |
+|---|---|
+| <img src="docs/img/06-movil-apuntar.png" width="300" alt="Móvil"> | <img src="docs/img/07-ajustes-conexion.png" width="300" alt="Ajustes"> |
+
 ## Qué hay en el repositorio
 
 | Ruta | Para qué |

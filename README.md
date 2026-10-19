@@ -22,6 +22,22 @@ Plus a permanent **"how much do I have left this month"** header, offline suppor
 
 Everything runs on Google's servers and GitHub Pages, so **your computer does not need to be on**: it works anywhere your phone has data.
 
+## Screenshots
+
+*Demo data only.*
+
+| Command Center (PC) | Expenses with "Paid with" account |
+|---|---|
+| ![Command Center](docs/img/02-centro-de-mando.png) | ![Expenses](docs/img/03-gastos-cuenta.png) |
+
+| My money (accounts and balances) | Planning and investing |
+|---|---|
+| ![My money](docs/img/04-mi-dinero.png) | ![Planning](docs/img/05-planning.png) |
+
+| Phone: log an expense | Settings: connect your sheet |
+|---|---|
+| <img src="docs/img/06-movil-apuntar.png" width="300" alt="Phone"> | <img src="docs/img/07-ajustes-conexion.png" width="300" alt="Settings"> |
+
 ## Features
 
 | | |
