@@ -226,6 +226,7 @@
     const opts = ['todos'].concat(mesesConDatos());
     return head(dev ? '🔄 Devoluciones' : '📝 Gastos', `<select id="gMes" class="t pc-sel">${opts.map((o) => `<option value="${o}" ${o === mes ? 'selected' : ''}>${o === 'todos' ? 'Todos los meses' : C.monthLabel(o)}</option>`).join('')}</select>
       <input id="gQ" class="t pc-sel" type="search" placeholder="🔎 Buscar (también dentro de tickets)" value="${esc(st.gQ)}" style="min-width:260px">`) + `
+      ${FF.payHas && FF.payHas() ? `<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="nPay" style="margin:0">💳 Pagado con (para el gasto nuevo de la fila de abajo)</label><select id="nPay" class="t" style="max-width:340px">${FF.payOptions()}</select></div>` : ''}
       <div class="card" style="padding:0;overflow:auto">
         <table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th style="min-width:260px">Categoría</th><th class="r" style="width:120px">Importe €</th><th style="width:140px">Tipo</th><th>Detalle</th><th style="width:90px"></th></tr></thead>
         <tbody>
@@ -503,7 +504,8 @@
     if (!cat) { shake($('#nCat')); FF.toast('Elige una categoría'); return; }
     const row = { id: C.uuid(), fecha, categoria: cat, importe: imp, tipo: $('#nTipo').value, detalle: $('#nDet').value.trim(), comercio: '', items: '', ticketId: '', origen: 'app' };
     FF.addGastos([row]); if (row.detalle) FF.learn(row.detalle, cat);
-    FF.toast('✓ Gasto añadido'); now();
+    const pg = FF.payApply ? FF.payApply(row.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, imp) : '';
+    FF.toast('✓ ' + (row.tipo === C.TIPO_DEV ? 'Devolución añadida' : 'Gasto añadido') + (pg ? ' · ' + esc(pg) : '')); now();
     setTimeout(() => { const i = $('#nImp'); if (i) i.focus(); }, 30);
   }
 

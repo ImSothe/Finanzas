@@ -200,7 +200,7 @@
     FF.payFill();
     return `${d < 0 ? '−' : '+'}${fmt(Math.abs(d))} en ${c.nombre}`;
   };
-  document.addEventListener('change', (e) => { const t = e.target; if (t && (t.id === 'payAcc' || t.id === 'qPay')) { lsSet('ff.pay', t.value); FF.payFill(); } });
+  document.addEventListener('change', (e) => { const t = e.target; if (t && (t.id === 'payAcc' || t.id === 'qPay' || t.id === 'nPay')) { lsSet('ff.pay', t.value); FF.payFill(); } });
 
   pcMain.addEventListener('click', (e) => {
     if ($('#mdn')) {
