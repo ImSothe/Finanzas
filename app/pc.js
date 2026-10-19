@@ -461,7 +461,7 @@
     if ((!FF.pcActive && !mpage) || view === 'ajustes') return;
     $$('#pcNav button[data-v]').forEach((b) => b.classList.toggle('on', b.dataset.v === view));
     const keepScroll = window.scrollY;
-    const sinCats = !cats().length && !['guia', 'graficos', 'piloto', 'deudas', 'ahorros'].includes(view);
+    const sinCats = !cats().length && !['guia', 'graficos', 'piloto', 'deudas', 'ahorros', 'cartera', 'dinero', 'plan'].includes(view);
     pcMain.innerHTML = (sinCats ? noCatsCard() : '') + ({ cmd: cmdView, gastos: () => gastosView('gastos'), dev: devView, extras: extrasView, anio: anioView, ahorros: ahorrosView, deudas: deudasView, piloto: pilotoView, ...(FF.views || {}) }[view] || cmdView)();
     if (view === 'cmd') { fillDatalist(); }
     window.scrollTo(0, keepScroll);

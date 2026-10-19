@@ -131,6 +131,11 @@
     </div>`;
   }
   FF.views.cartera = carteraView;
+  /** Valor actual de la cartera (para el patrimonio y el planning); usa los últimos precios guardados. */
+  FF.carteraTotals = () => {
+    const rows = lista().map((p) => ({ p, s: C.positionStats(p, precioDe(p).p) }));
+    return { ...C.portfolioTotals(rows.map((r) => ({ stats: r.s, ch: null }))), porTipo: rows.reduce((o, r) => { if (r.s.valor > 0) o[r.p.tipo] = C.r2((o[r.p.tipo] || 0) + r.s.valor); return o; }, {}), n: rows.length };
+  };
 
   /* ------------------------------------------------------------------ acciones */
   const save = (l) => FF.setConfig('cartera', l);
