@@ -3,7 +3,7 @@
   'use strict';
   const C = window.Core;
   const FF = (window.FF = { pcActive: false });      // enganche para la vista de escritorio (pc.js)
-  const VERSION = '1.0.0';
+  const VERSION = '1.0.0', BUILD = 36;                                       // BUILD sube con cada publicación (se ve abajo en Ajustes)
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -492,6 +492,7 @@
   /* ================================================================== AJUSTES */
   function renderSettings() {
     $('#sUrl').value = cfg.url; $('#sTok').value = cfg.token; $('#sKey').value = cfg.gKey; $('#sMod').value = cfg.gModel; $('#sBase').value = cfg.gBase;
+    const bt = $('#buildTag'); if (bt) bt.textContent = 'versión ' + BUILD;
     settingsStats();
   }
   function settingsStats() {

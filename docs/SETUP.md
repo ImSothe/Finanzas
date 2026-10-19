@@ -68,7 +68,10 @@ Open **https://sheets.new** and name it. Use a personal Google account; with sev
 2. **Send it to yourself** (WhatsApp "saved messages", an email…). **Never share it: it contains your token.**
 3. **On the iPhone,** open the app **from the icon** (not from Safari). On the welcome screen tap the small text **"Saltar, ya sé usarla"** (skip).
 4. Tap **⚙️ Ajustes** (last tab, bottom right) and scroll to the **"Conexión con tu hoja de Google"** card.
-5. Under the "🔗 Enlace para configurar otro móvil" button you will see **"¿Tienes un enlace de configuración? Pégalo aquí"** and a box with a **Usar** button.
+5. Under the "🔗 Enlace para configurar otro móvil" button you will see **"¿Tienes un enlace de configuración? Pégalo aquí"** and a box with a **Usar** button (top right of that card it says **"versión 36"** or higher; if no version is shown you have the old app).
+
+<img src="img/13-enlace-ajustes.png" width="300" alt="Settings: box to paste the configuration link">
+
 6. **Copy the link:** step out to WhatsApp or Messages, long-press the message → **Copy** (do not tap it to open it).
 7. **Back in the app** (from the icon) → Ajustes, tap the box, long-press and choose **Paste**.
 8. Tap **Usar**. **"¿Conectar esta app?"** appears → **Conectar**.

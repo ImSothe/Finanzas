@@ -72,7 +72,10 @@ Abre **https://sheets.new**. Ponle un nombre (por ejemplo «Finanzas»). Usa tu 
 2. **Mándatelo a ti mismo** (WhatsApp «Mensajes guardados», un email…). **No lo compartas: lleva tu token.**
 3. **En el iPhone,** abre la app **desde el icono** (no desde Safari). Si sale «Bienvenido», pulsa el texto pequeño **«Saltar, ya sé usarla»**.
 4. Toca **⚙️ Ajustes** (la última pestaña de abajo, a la derecha) y baja hasta la tarjeta **«Conexión con tu hoja de Google»**.
-5. Debajo del botón «🔗 Enlace para configurar otro móvil» verás **«¿Tienes un enlace de configuración? Pégalo aquí»** y una casilla con el botón **Usar**.
+5. Debajo del botón «🔗 Enlace para configurar otro móvil» verás **«¿Tienes un enlace de configuración? Pégalo aquí»** y una casilla con el botón **Usar** (arriba a la derecha de esa tarjeta pone **«versión 36»** o superior; si no pone versión, tienes la app antigua).
+
+<img src="img/13-enlace-ajustes.png" width="300" alt="Ajustes: casilla para pegar el enlace de configuración">
+
 6. **Copia el enlace:** sal un momento a WhatsApp o Mensajes, mantén el dedo sobre el mensaje → **Copiar** (sin tocarlo para abrirlo).
 7. **Vuelve a la app** (desde el icono) → Ajustes, toca la casilla, mantén pulsado y elige **Pegar**.
 8. Pulsa **Usar**. Sale **«¿Conectar esta app?»** → **Conectar**.
