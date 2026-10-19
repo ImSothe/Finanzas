@@ -387,7 +387,7 @@
   function semaforoMsg(m) {
     const p = Math.round((m.pctGastado || 0) * 100);
     if (m.semaforo === 'vacio') return '⏳ Configura tu sueldo para ver cuánto te queda';
-    if (m.semaforo === 'rojo') return m.queda < 0 ? `🚨 Has gastado más de lo que has generado este mes: te pasas ${fmtEUR(-m.queda)}` : `🚨 ALARMA: ya has gastado el ${p}% de lo ganado`;
+    if (m.semaforo === 'rojo') return m.queda < 0 ? `🚨 ¡HAS GASTADO MÁS DE LO GENERADO ESTE MES! Te pasas ${fmtEUR(-m.queda)}` : `🚨 ALARMA: ya has gastado el ${p}% de lo ganado`;
     if (m.semaforo === 'amarillo') return `⚠️ Ojo: llevas gastado el ${p}% de lo ganado`;
     return `✅ Vas bien: has gastado el ${p}% de lo ganado`;
   }

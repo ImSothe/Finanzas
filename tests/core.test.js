@@ -65,7 +65,7 @@ test('semáforo: vacío, verde (<50 % gastado), amarillo (≥50 %), rojo (≥80 
   assert.equal(con(100).semaforo, 'rojo');
   assert.equal(C.computeMonth(mkData({ gastos: [g('2026-07-01', CATS[1], 5000)] }), '2026-07').semaforo, 'rojo');
   assert.match(C.semaforoMsg(con(66)), /66%/);
-  assert.match(C.semaforoMsg(con(150)), /más de lo que has generado/);
+  assert.match(C.semaforoMsg(con(150)), /HAS GASTADO MÁS DE LO GENERADO/);
 });
 
 test('shiftMonth cruza años en ambos sentidos', () => {
