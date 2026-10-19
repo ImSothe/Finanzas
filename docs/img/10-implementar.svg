@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 360" width="760" height="360" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="760" height="360" rx="14" fill="#f4f6fb"/>
+  <rect x="0" y="0" width="760" height="54" rx="14" fill="#ffffff"/>
+  <rect x="0" y="30" width="760" height="24" fill="#ffffff"/>
+  <text x="22" y="34" font-size="17" fill="#334155" font-weight="600">Editor de código · Code.gs</text>
+  <rect x="520" y="12" width="88" height="30" rx="6" fill="#e2e8f0"/>
+  <text x="564" y="32" font-size="14" fill="#334155" text-anchor="middle">Ejecutar</text>
+  <rect x="632" y="10" width="104" height="34" rx="17" fill="#2563eb" stroke="#1d4ed8" stroke-width="2"/>
+  <text x="684" y="32" font-size="15" fill="#ffffff" text-anchor="middle" font-weight="700">Implementar ▾</text>
+  <rect x="560" y="52" width="176" height="92" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="566" y="58" width="164" height="28" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="576" y="77" font-size="13" fill="#1e3a8a" font-weight="700">Nueva implementación</text>
+  <text x="576" y="106" font-size="13" fill="#475569">Administrar implementaciones</text>
+  <text x="576" y="130" font-size="13" fill="#475569">Probar implementaciones</text>
+  <text x="40" y="120" font-size="16" fill="#0f172a" font-weight="700">1) Estás en Apps Script</text>
+  <text x="40" y="146" font-size="16" fill="#0f172a">    (Extensiones → Apps Script).</text>
+  <text x="40" y="180" font-size="16" fill="#0f172a">2) Arriba a la derecha: botón azul «Implementar».</text>
+  <text x="40" y="208" font-size="16" fill="#0f172a">3) Elige «Nueva implementación».</text>
+  <text x="40" y="244" font-size="16" fill="#0f172a">Si perdiste la URL más tarde:</text>
+  <text x="40" y="270" font-size="16" fill="#0f172a">«Administrar implementaciones».</text>
+  <text x="380" y="342" font-size="12" fill="#64748b" text-anchor="middle">Imagen de ejemplo con datos falsos</text>
+</svg>

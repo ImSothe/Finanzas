@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 420" width="760" height="420" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="760" height="420" rx="14" fill="#e2e8f0"/>
+  <rect x="120" y="22" width="520" height="352" rx="12" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="148" y="58" font-size="19" font-weight="700" fill="#0f172a">Nueva implementación</text>
+  <text x="148" y="90" font-size="13" fill="#475569">Seleccionar tipo</text>
+  <circle cx="156" cy="108" r="13" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="156" y="113" font-size="14" text-anchor="middle">⚙️</text>
+  <rect x="180" y="94" width="200" height="30" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="192" y="114" font-size="14" fill="#1e3a8a" font-weight="700">Aplicación web</text>
+  <text x="148" y="154" font-size="13" fill="#475569">Descripción (opcional)</text>
+  <rect x="148" y="162" width="464" height="28" rx="6" fill="#f8fafc" stroke="#cbd5e1"/>
+  <text x="148" y="214" font-size="13" fill="#475569">Ejecutar como</text>
+  <rect x="148" y="222" width="464" height="30" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="160" y="242" font-size="14" fill="#14532d" font-weight="700">Yo (tu correo)</text>
+  <text x="148" y="276" font-size="13" fill="#475569">Quién tiene acceso</text>
+  <rect x="148" y="284" width="464" height="30" rx="6" fill="#dcfce7" stroke="#16a34a" stroke-width="2"/>
+  <text x="160" y="304" font-size="14" fill="#14532d" font-weight="700">Cualquier usuario</text>
+  <text x="400" y="304" font-size="12" fill="#b91c1c" font-weight="700">← NO «Cualquier usuario con cuenta de Google»</text>
+  <rect x="520" y="330" width="92" height="30" rx="15" fill="#2563eb"/>
+  <text x="566" y="350" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="700">Implementar</text>
+  <text x="380" y="396" font-size="15" fill="#0f172a" text-anchor="middle" font-weight="700">Después copia la «URL de la aplicación web» (acaba en /exec).</text>
+  <text x="380" y="414" font-size="12" fill="#64748b" text-anchor="middle">Imagen de ejemplo con datos falsos</text>
+</svg>

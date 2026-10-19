@@ -27,6 +27,9 @@ Abre **https://sheets.new**. Ponle un nombre (por ejemplo «Finanzas»). Usa tu 
 4. Sale una ventana «Listo ✅» con el **token** (una cadena larga). **Cópialo** y guárdalo en un bloc de notas. Si lo pierdes: menú 💰 Finanzas App → *Mostrar el token*.
 5. Se crean las pestañas Gastos, Extras, Config y Diccionario.
 
+![Menú Finanzas App](img/08-menu-configurar.svg)
+![Ventana con el token](img/09-token.svg)
+
 ## Paso 4 · Sacar la URL (en Apps Script)
 1. En la pestaña de Apps Script: botón azul **Implementar** (arriba a la derecha) → **Nueva implementación**.
 2. Pulsa el engranaje ⚙️ junto a *Seleccionar tipo* → **Aplicación web**.
@@ -36,6 +39,10 @@ Abre **https://sheets.new**. Ponle un nombre (por ejemplo «Finanzas»). Usa tu 
 5. **Implementar** → autoriza los permisos otra vez si los pide.
 6. Copia la **URL de la aplicación web**. Tiene que ser así: `https://script.google.com/macros/s/…/exec`.
    Si la perdiste: **Implementar → Administrar implementaciones**.
+
+![Botón Implementar](img/10-implementar.svg)
+![Nueva implementación: Aplicación web](img/11-aplicacion-web.svg)
+![URL de la aplicación web](img/12-url.svg)
 
 **Comprobación:** abre esa URL en una **ventana de incógnito**. Debe salir `{"ok":true,"app":"FinanzasApp"}` sin pedirte iniciar sesión.
 

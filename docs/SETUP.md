@@ -25,6 +25,9 @@ Open **https://sheets.new** and name it. Use a personal Google account; with sev
 3. Accept the permissions. If Google warns *"unverified app"*: **Advanced → Go to … (unsafe) → Allow**. It is your own script.
 4. A "Listo ✅" dialog shows the **token**. Copy it. Lost it? Menu → *Mostrar el token*.
 
+![Finanzas App menu](img/08-menu-configurar.svg)
+![Token dialog](img/09-token.svg)
+
 ## 4 · Get the URL (in Apps Script)
 1. Blue **Deploy** button (top right) → **New deployment**.
 2. Gear ⚙️ next to *Select type* → **Web app**.
@@ -33,6 +36,10 @@ Open **https://sheets.new** and name it. Use a personal Google account; with sev
    > ⚠️ **Not** "Anyone with a Google account" and not "Only myself": with those the browser blocks the app (CORS error) and it cannot connect.
 5. **Deploy**, authorise again if asked.
 6. Copy the **Web app URL**: `https://script.google.com/macros/s/…/exec`. Lost it? **Deploy → Manage deployments**.
+
+![Deploy button](img/10-implementar.svg)
+![New deployment: Web app](img/11-aplicacion-web.svg)
+![Web app URL](img/12-url.svg)
 
 **Check:** open that URL in an **incognito window**. You must see `{"ok":true,"app":"FinanzasApp"}` without any login.
 

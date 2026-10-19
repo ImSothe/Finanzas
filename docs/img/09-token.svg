@@ -1,0 +1,13 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 310" width="760" height="310" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="760" height="310" rx="14" fill="#e2e8f0"/>
+  <rect x="150" y="40" width="460" height="215" rx="12" fill="#ffffff" stroke="#94a3b8" stroke-width="1.5"/>
+  <text x="180" y="82" font-size="20" font-weight="700" fill="#0f172a">Listo ✅</text>
+  <text x="180" y="116" font-size="15" fill="#334155">Tu TOKEN (cópialo en Ajustes de la app):</text>
+  <rect x="180" y="132" width="400" height="38" rx="8" fill="#fef9c3" stroke="#d97706" stroke-width="2"/>
+  <text x="196" y="157" font-size="13" fill="#92400e" font-family="Consolas, monospace">f4ke-t0ken-EJEMPLO-9d8c7b6a5e4f3a2b1c0d-no-es-real</text>
+  <text x="180" y="196" font-size="13" fill="#475569">Siguiente paso: Implementar &gt; Nueva implementación &gt; Aplicación web</text>
+  <rect x="504" y="206" width="76" height="30" rx="15" fill="#2563eb"/>
+  <text x="542" y="226" font-size="14" fill="#ffffff" text-anchor="middle" font-weight="700">Aceptar</text>
+  <text x="380" y="280" font-size="15" fill="#0f172a" text-anchor="middle" font-weight="700">Copia el token y guárdalo en un bloc de notas. No lo compartas.</text>
+  <text x="380" y="298" font-size="12" fill="#64748b" text-anchor="middle">Imagen de ejemplo con datos falsos</text>
+</svg>

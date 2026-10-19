@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 760 330" width="760" height="330" font-family="Segoe UI, Arial, sans-serif">
+  <rect width="760" height="330" rx="14" fill="#f4f6fb"/>
+  <rect x="0" y="0" width="760" height="64" rx="14" fill="#ffffff"/>
+  <rect x="0" y="40" width="760" height="24" fill="#ffffff"/>
+  <text x="22" y="30" font-size="18" fill="#334155" font-weight="600">Hoja de cálculo sin título</text>
+  <g font-size="14" fill="#334155">
+    <text x="22" y="56">Archivo</text><text x="86" y="56">Editar</text><text x="140" y="56">Ver</text><text x="178" y="56">Insertar</text>
+    <text x="246" y="56">Formato</text><text x="316" y="56">Datos</text><text x="372" y="56">Herramientas</text>
+    <text x="474" y="56">Extensiones</text><text x="560" y="56">Ayuda</text>
+  </g>
+  <rect x="612" y="40" width="132" height="22" rx="6" fill="#fde68a" stroke="#d97706" stroke-width="2"/>
+  <text x="624" y="56" font-size="14" fill="#7c2d12" font-weight="700">💰 Finanzas App</text>
+  <rect x="560" y="70" width="190" height="112" rx="8" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.5"/>
+  <rect x="566" y="78" width="178" height="30" rx="6" fill="#dbeafe" stroke="#2563eb" stroke-width="2"/>
+  <text x="576" y="98" font-size="13" fill="#1e3a8a" font-weight="700">1. Configurar (crear pestañas y token)</text>
+  <text x="576" y="130" font-size="13" fill="#475569">Mostrar el token</text>
+  <text x="576" y="158" font-size="13" fill="#475569">Regenerar el token…</text>
+  <path d="M520 150 C 540 120, 552 100, 562 92" stroke="#2563eb" stroke-width="3" fill="none" marker-end="url(#a)"/>
+  <defs><marker id="a" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="#2563eb"/></marker></defs>
+  <text x="40" y="150" font-size="16" fill="#0f172a" font-weight="700">1) Recarga la hoja (F5).</text>
+  <text x="40" y="178" font-size="16" fill="#0f172a">2) Al final de la barra aparece el menú</text>
+  <text x="40" y="202" font-size="16" fill="#0f172a">    «💰 Finanzas App».</text>
+  <text x="40" y="230" font-size="16" fill="#0f172a">3) Pulsa «1. Configurar» y acepta los permisos.</text>
+  <text x="380" y="316" font-size="12" fill="#64748b" text-anchor="middle">Imagen de ejemplo con datos falsos</text>
+</svg>
