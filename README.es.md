@@ -74,8 +74,8 @@ Ya está publicada en **https://imsothe.github.io/Finanzas/** (GitHub Pages, aut
 1. Abre la URL en el móvil → **Ajustes**: pega la **URL `/exec`** y el **token** → *Probar*.
 2. (Opcional, escáner) pega tu **API key de Gemini** ([Google AI Studio](https://aistudio.google.com/apikey)). El modelo por defecto es `gemini-2.5-flash`.
 3. (Opcional) **Ajustes → Importar .xlsx** y elige tu Excel: trae tu historial (no duplica si lo repites).
-4. **Instalar**: Android/Chrome → menú ⋮ → *Instalar app*. iPhone/Safari → Compartir → *Añadir a pantalla de inicio*.
-5. **Otro móvil**: Ajustes → *🔗 Enlace para configurar otro móvil* → te lo envías a ti mismo y lo abres allí (te pide confirmar el servidor; así no escribes el token a mano).
+4. **Instalar**: Android/Chrome → menú ⋮ → *Instalar app*. iPhone/**Safari** → Compartir → *Añadir a pantalla de inicio*, y ábrela siempre desde el icono. En el iPhone la app instalada guarda sus datos aparte de Safari (sale como usuario nuevo): conéctala pegando el enlace de configuración en **Ajustes** (detalles en [docs/SETUP.es.md](docs/SETUP.es.md#instalarla-en-el-móvil)).
+5. **Otro móvil**: Ajustes → *🔗 Enlace para configurar otro móvil* → te lo envías a ti mismo y lo abres allí (te pide confirmar el servidor; así no escribes el token a mano), o lo **pegas** en Ajustes dentro de la app instalada.
 
 ## Cómo se usa
 

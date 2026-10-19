@@ -51,7 +51,23 @@ Open **https://sheets.new** and name it. Use a personal Google account; with sev
 <img src="img/07-ajustes-conexion.png" width="300" alt="Settings: connection with your Google Sheet">
 
 ## 6 · Your phone
-On the PC: **Ajustes → 🔗 Enlace para configurar otro móvil**. Send the link to yourself (never share it: it contains your token) and open it on the phone → **Conectar**.
+### Install it on the phone
+- **iPhone:** it must be **Safari** (Chrome on iPhone cannot install it properly). Open the site → **Share** button (square with an up arrow) → scroll and tap **"Add to Home Screen"** → **Add**.
+- **Android:** in Chrome, ⋮ menu → **Install app** (or "Add to Home screen").
+- Always open it from **the icon**. It opens by itself, full screen, with no address bar: it does not open any browser, even if you have another one as default.
+- Once installed, iOS does not wipe its data for not using it (in plain Safari it does, after ~7 days without opening it).
+
+### Connect it to your sheet
+> ⚠️ **On iPhone the installed app keeps its data separate from Safari**, so the first time it looks like a brand-new user. That is normal: your data is still in your Google Sheet, you just have to connect it.
+> A link tapped in WhatsApp or Messages opens in your default browser, **not** inside the installed app. That is why you **paste** it inside the app.
+
+1. On the PC: **Ajustes → 🔗 Enlace para configurar otro móvil → 📋 Copiar**.
+2. Send it to yourself (WhatsApp "saved messages", an email…). **Never share it: it contains your token.**
+3. On the phone, open the app **from the icon**. If the welcome screen shows, tap **Saltar** (Skip).
+4. **Ajustes** → field **"¿Tienes un enlace de configuración? Pégalo aquí"**: copy the link from the message (long-press → Copy, without tapping it), paste it and tap **Usar** → **Conectar**.
+5. If you do not see that field you have an old cached version: delete the icon, open the site in Safari again and reinstall.
+
+Alternative: type the URL and token by hand in the two top fields of Ajustes.
 
 ## 7 · Bring your Excel (optional)
 **Ajustes → Importar .xlsx**. A summary is shown first; importing twice never duplicates.

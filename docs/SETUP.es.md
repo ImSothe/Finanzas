@@ -55,8 +55,23 @@ Abre **https://sheets.new**. Ponle un nombre (por ejemplo «Finanzas»). Usa tu 
 <img src="img/07-ajustes-conexion.png" width="300" alt="Ajustes: conexión con tu hoja de Google">
 
 ## Paso 6 · El móvil
-En el PC: **Ajustes → 🔗 Enlace para configurar otro móvil**. Cópialo, mándatelo a ti mismo (no lo compartas: lleva tu token) y ábrelo en el móvil → **Conectar**.
-Para instalarla: Android/Chrome ⋮ → *Instalar app*; iPhone/Safari → Compartir → *Añadir a pantalla de inicio*.
+### Instalarla en el móvil
+- **iPhone:** tiene que ser en **Safari** (en Chrome de iPhone no se puede instalar bien). Abre la web → botón **Compartir** (cuadrado con flecha hacia arriba) → baja y pulsa **«Añadir a pantalla de inicio»** → **Añadir**.
+- **Android:** en Chrome, menú ⋮ → **Instalar app** (o «Añadir a la pantalla de inicio»).
+- Ábrela siempre desde **el icono**. Se abre sola, a pantalla completa y sin barra de direcciones: no abre ningún navegador, aunque tengas otro por defecto.
+- Instalada, el iPhone no borra sus datos por no usarla (en Safari sí los borra si pasas ~7 días sin abrirla).
+
+### Conectarla con tu hoja
+> ⚠️ **En el iPhone, la app instalada guarda sus datos aparte de Safari**, así que al abrirla por primera vez sale como si fueras un usuario nuevo. Es normal: tus datos siguen en tu hoja de Google, solo hay que conectarla.
+> Un enlace tocado desde WhatsApp o Mensajes se abre en tu navegador por defecto, **no** dentro de la app instalada. Por eso se **pega** dentro de la app.
+
+1. En el PC: **Ajustes → 🔗 Enlace para configurar otro móvil → 📋 Copiar**.
+2. Mándatelo a ti mismo (WhatsApp «Mensajes guardados», un email…). **No lo compartas: lleva tu token.**
+3. En el móvil, abre la app **desde el icono**. Si sale la bienvenida, pulsa **Saltar**.
+4. **Ajustes** → campo **«¿Tienes un enlace de configuración? Pégalo aquí»**: copia el enlace del mensaje (mantén pulsado → Copiar, sin tocarlo), pégalo y pulsa **Usar** → **Conectar**.
+5. Si no ves ese campo, tienes una versión antigua guardada: borra el icono, abre la web otra vez en Safari y vuelve a instalarla.
+
+Alternativa: teclear la URL y el token a mano en los dos campos de arriba de Ajustes.
 
 ## Paso 7 · Traer tu Excel (opcional)
 **Ajustes → Importar .xlsx** → elige tu archivo. Te enseña un resumen antes de importar y no duplica si lo repites.

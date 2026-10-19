@@ -86,8 +86,8 @@ You need a Google account. Nothing here costs money (Gemini has a free tier).
 1. Open https://imsothe.github.io/Finanzas/ on your phone (or host the `app/` folder yourself, see below).
 2. **Ajustes (Settings)** → paste the `/exec` URL and the token → *Probar* (Test).
 3. Optional, for the receipt scanner: paste a **Gemini API key** ([Google AI Studio](https://aistudio.google.com/apikey)). Default model: `gemini-2.5-flash`.
-4. **Install it**: Android/Chrome → ⋮ → *Install app*. iPhone/Safari → Share → *Add to Home Screen*.
-5. For a second phone: **Ajustes → 🔗 Enlace para configurar otro móvil**, send the link to yourself and open it there.
+4. **Install it**: Android/Chrome → ⋮ → *Install app*. iPhone/**Safari** → Share → *Add to Home Screen*, then open it from the icon. The installed iPhone app keeps its data apart from Safari, so connect it again by pasting the config link in **Ajustes** (details in [docs/SETUP.md](docs/SETUP.md#install-it-on-the-phone)).
+5. For a second phone: **Ajustes → 🔗 Enlace para configurar otro móvil**, send the link to yourself and open it there (or paste it into **Ajustes** inside the installed app).
 
 ### 3. Start from your own Excel (optional)
 `tools/build_seed.py` reads your spreadsheet and creates a personalised `Code.gs` that seeds your categories, salary, fixed costs, subscriptions and a habits dictionary taken from your history:
