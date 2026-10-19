@@ -53,6 +53,8 @@ Everything runs on Google's servers and GitHub Pages, so **your computer does no
 
 ## Quick start (about 10 minutes)
 
+> 📖 **New to Google Apps Script?** Follow the detailed [step-by-step guide](docs/SETUP.md): what to copy, where, and the common errors.
+
 You need a Google account. Nothing here costs money (Gemini has a free tier).
 
 ### 1. Create the backend (Google Sheets + Apps Script)
@@ -113,7 +115,7 @@ You manage everything **from the Google Sheet itself**; the app picks changes up
 | Symptom | Likely cause |
 |---|---|
 | "Token incorrecto" | Token pasted wrong or regenerated. Menu *Mostrar el token*. |
-| *Probar* says it cannot connect | Deployment is not "Anyone", or you edited `Code.gs` without redeploying a new version. |
+| *Probar* says it cannot connect (CORS error in the console) | Deployment must be **Anyone** (not "Anyone with a Google account"), or you edited `Code.gs` without redeploying a new version. See [docs/SETUP.md](docs/SETUP.md). |
 | Receipt scan: "API key not valid" | Wrong/expired Gemini key, or the key lacks access to the model. |
 | Receipt scan: rate limit | Gemini free tier quota; wait a minute. |
 | Numbers differ from my spreadsheet | Check `Config` (`sueldo`, `fijos`, `suscripciones`) and that categories match exactly. |

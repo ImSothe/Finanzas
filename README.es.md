@@ -41,6 +41,8 @@ python tools/build_gs.py                                         # -> dist/Code.
 Si no quieres partir de un Excel, usa `backend/Code.gs` (genérico): las pestañas se crean vacías y editas la pestaña **Config** de la hoja.
 
 ### 2. Crear la base en Google Sheets
+> 📖 Guía detallada con lo que hay que copiar y los errores típicos: [docs/SETUP.es.md](docs/SETUP.es.md).
+
 1. Crea una **hoja de cálculo de Google** nueva (sheets.new).
 2. **Extensiones → Apps Script**. Borra lo que haya y pega el contenido de `dist/Code.gs`. Guarda.
 3. Recarga la hoja: aparece el menú **💰 Finanzas App**. Pulsa **1. Configurar**. Google pedirá permisos la primera vez (*"app no verificada" → Configuración avanzada → Ir a…*; es tu propio script).
