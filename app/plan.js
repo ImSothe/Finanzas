@@ -199,7 +199,10 @@
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } };
   const payList = () => cuentas();
-  const payId = () => { const id = lsGet('ff.pay') || ''; return payList().some((c) => c.id === id) ? id : ''; };
+  /* Por defecto: la primera cuenta que no sea efectivo (si solo hay una cuenta, esa). El efectivo nunca se elige solo. Lo que elijas vale para un apunte y luego vuelve a la de por defecto. */
+  let payChoice = null;
+  const payDefault = () => { const l = payList(); if (l.length === 1) return l[0].id; const b = l.find((c) => c.tipo !== 'efectivo'); return b ? b.id : ''; };
+  const payId = () => (payChoice !== null && (payChoice === '' || payList().some((c) => c.id === payChoice)) ? payChoice : payDefault());
   FF.payHas = () => payList().length > 0;
   FF.payOptions = (vacio) => `<option value="">${esc(vacio || '— No descontar de ninguna cuenta —')}</option>${payList().map((c) => `<option value="${esc(c.id)}" ${c.id === payId() ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}`;
   /** Rellena el selector del móvil y lo oculta si no hay cuentas. */
@@ -211,8 +214,13 @@
     FF.payFill();
     return `${d < 0 ? '−' : '+'}${fmt(Math.abs(d))} en ${c.nombre}`;
   }
-  FF.payApply = (tipo, importe, undo) => { const id = payId(); return id ? applyTo(id, C.payDelta(tipo, importe) * (undo ? -1 : 1)) : ''; };
-  document.addEventListener('change', (e) => { const t = e.target; if (t && (t.id === 'payAcc' || t.id === 'qPay' || t.id === 'nPay' || t.id === 'xPay')) { lsSet('ff.pay', t.value); FF.payFill(); } });
+  /** undo: el id de la cuenta usada al apuntar (FF.payLastId), para devolver el saldo a esa misma cuenta. */
+  FF.payApply = (tipo, importe, undo) => {
+    const id = typeof undo === 'string' ? undo : payId();
+    if (typeof undo !== 'string') { FF.payLastId = id; payChoice = null; }
+    return id ? applyTo(id, C.payDelta(tipo, importe) * (typeof undo === 'string' ? -1 : 1)) : '';
+  };
+  document.addEventListener('change', (e) => { const t = e.target; if (t && (t.id === 'payAcc' || t.id === 'qPay' || t.id === 'nPay' || t.id === 'xPay')) { payChoice = t.value; FF.payFill(); } });
 
   pcMain.addEventListener('click', (e) => {
     if ($('#mdn')) {

@@ -489,9 +489,9 @@
     } else {
       const row = { id: C.uuid(), fecha, categoria: q.cat, importe: imp, tipo: q.tipo, detalle: concept, comercio: '', items: '', ticketId: '', origen: 'app' };
       FF.addGastos([row]);
-      const pt = q.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, pg = FF.payApply ? FF.payApply(pt, imp) : '';
+      const pt = q.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, pg = FF.payApply ? FF.payApply(pt, imp) : '', pid = FF.payLastId;
       if (concept) FF.learn(concept, q.cat);
-      FF.toast(`✓ Guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>${pg ? ' · ' + esc(pg) : ''}`, { label: 'Deshacer', fn: () => { FF.delGasto(row.id); if (pg && FF.payApply) FF.payApply(pt, imp, true); FF.renderAll(); } });
+      FF.toast(`✓ Guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>${pg ? ' · ' + esc(pg) : ''}`, { label: 'Deshacer', fn: () => { FF.delGasto(row.id); if (pg && FF.payApply) FF.payApply(pt, imp, pid); FF.renderAll(); } });
     }
     Object.assign(st.q, { imp: '', con: '', fec: '', cat: '', auto: false, tipo: extra ? 'Gasto' : q.tipo });
     if (C.monthKey(fecha) !== FF.ui.mk) FF.ui.mk = C.monthKey(fecha);
