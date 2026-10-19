@@ -89,6 +89,17 @@ You need a Google account. Nothing here costs money (Gemini has a free tier).
 4. **Install it**: Android/Chrome → ⋮ → *Install app*. iPhone/**Safari** → Share → *Add to Home Screen*, then open it from the icon. The installed iPhone app keeps its data apart from Safari, so connect it again by pasting the config link in **Ajustes** (details in [docs/SETUP.md](docs/SETUP.md#install-it-on-the-phone)).
 5. For a second phone: **Ajustes → 🔗 Enlace para configurar otro móvil**, send the link to yourself and open it there (or paste it into **Ajustes** inside the installed app).
 
+> [!IMPORTANT]
+> **iPhone: the installed app looks like a "new user". That is normal and takes 2 minutes to fix.**
+> It keeps its data apart from Safari, but your data is still in your Google Sheet. To connect it:
+> 1. On the PC: **Ajustes → 🔗 Enlace para configurar otro móvil → 📋 Copiar**, and send it to yourself (never share it: it contains your token).
+> 2. On the iPhone, open the app **from the icon** (not from Safari). On the welcome screen tap **"Saltar, ya sé usarla"** (skip).
+> 3. Tap **⚙️ Ajustes** (bottom right) and scroll to **"Conexión con tu hoja de Google"**.
+> 4. Copy the link from the message (long-press → **Copy**, without tapping it), go back to the app and **paste** it into the box *"¿Tienes un enlace de configuración? Pégalo aquí"* (long-press → **Paste**).
+> 5. Tap **Usar** → **Conectar** and wait until the top right says **Sincronizado**.
+>
+> If it says *"Ese texto no es un enlace de configuración"*, copy the whole link (it starts with `https://imsothe.github.io/Finanzas/#c=`). If you do not see the box you have an old cached version: delete the icon and reinstall it from Safari. Full guide: [docs/SETUP.md](docs/SETUP.md#install-it-on-the-phone).
+
 ### 3. Start from your own Excel (optional)
 `tools/build_seed.py` reads your spreadsheet and creates a personalised `Code.gs` that seeds your categories, salary, fixed costs, subscriptions and a habits dictionary taken from your history:
 ```bash

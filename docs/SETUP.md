@@ -58,14 +58,29 @@ Open **https://sheets.new** and name it. Use a personal Google account; with sev
 - Once installed, iOS does not wipe its data for not using it (in plain Safari it does, after ~7 days without opening it).
 
 ### Connect it to your sheet
-> ⚠️ **On iPhone the installed app keeps its data separate from Safari**, so the first time it looks like a brand-new user. That is normal: your data is still in your Google Sheet, you just have to connect it.
-> A link tapped in WhatsApp or Messages opens in your default browser, **not** inside the installed app. That is why you **paste** it inside the app.
 
-1. On the PC: **Ajustes → 🔗 Enlace para configurar otro móvil → 📋 Copiar**.
-2. Send it to yourself (WhatsApp "saved messages", an email…). **Never share it: it contains your token.**
-3. On the phone, open the app **from the icon**. If the welcome screen shows, tap **Saltar** (Skip).
-4. **Ajustes** → field **"¿Tienes un enlace de configuración? Pégalo aquí"**: copy the link from the message (long-press → Copy, without tapping it), paste it and tap **Usar** → **Conectar**.
-5. If you do not see that field you have an old cached version: delete the icon, open the site in Safari again and reinstall.
+> [!IMPORTANT]
+> **iPhone: the installed app looks like a "new user". That is normal and takes 2 minutes to fix.**
+> The installed app keeps its data apart from Safari, but **your data is still in your Google Sheet**: you only have to connect it.
+> A link tapped in WhatsApp or Messages opens in your default browser, **not** inside the installed app. That is why the link is **pasted** inside the app.
+
+1. **On the PC:** Ajustes → **🔗 Enlace para configurar otro móvil** → **📋 Copiar**.
+2. **Send it to yourself** (WhatsApp "saved messages", an email…). **Never share it: it contains your token.**
+3. **On the iPhone,** open the app **from the icon** (not from Safari). On the welcome screen tap the small text **"Saltar, ya sé usarla"** (skip).
+4. Tap **⚙️ Ajustes** (last tab, bottom right) and scroll to the **"Conexión con tu hoja de Google"** card.
+5. Under the "🔗 Enlace para configurar otro móvil" button you will see **"¿Tienes un enlace de configuración? Pégalo aquí"** and a box with a **Usar** button.
+6. **Copy the link:** step out to WhatsApp or Messages, long-press the message → **Copy** (do not tap it to open it).
+7. **Back in the app** (from the icon) → Ajustes, tap the box, long-press and choose **Paste**.
+8. Tap **Usar**. **"¿Conectar esta app?"** appears → **Conectar**.
+9. **Wait a few seconds:** the top right must say **Sincronizado** and your expenses and categories appear.
+
+**If something goes wrong**
+
+| What you see | What to do |
+|---|---|
+| "Ese texto no es un enlace de configuración" | You copied something else. Copy the whole link: it starts with `https://imsothe.github.io/Finanzas/#c=`. |
+| The link box does not exist | You have an old cached version. Delete the icon (long-press → Remove app), open the site in Safari and reinstall it. |
+| It never reaches "Sincronizado" | Check the indicator at the top. Make sure your sheet deployment is **Anyone** (see step 4). |
 
 Alternative: type the URL and token by hand in the two top fields of Ajustes.
 

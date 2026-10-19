@@ -62,14 +62,29 @@ Abre **https://sheets.new**. Ponle un nombre (por ejemplo «Finanzas»). Usa tu 
 - Instalada, el iPhone no borra sus datos por no usarla (en Safari sí los borra si pasas ~7 días sin abrirla).
 
 ### Conectarla con tu hoja
-> ⚠️ **En el iPhone, la app instalada guarda sus datos aparte de Safari**, así que al abrirla por primera vez sale como si fueras un usuario nuevo. Es normal: tus datos siguen en tu hoja de Google, solo hay que conectarla.
-> Un enlace tocado desde WhatsApp o Mensajes se abre en tu navegador por defecto, **no** dentro de la app instalada. Por eso se **pega** dentro de la app.
 
-1. En el PC: **Ajustes → 🔗 Enlace para configurar otro móvil → 📋 Copiar**.
-2. Mándatelo a ti mismo (WhatsApp «Mensajes guardados», un email…). **No lo compartas: lleva tu token.**
-3. En el móvil, abre la app **desde el icono**. Si sale la bienvenida, pulsa **Saltar**.
-4. **Ajustes** → campo **«¿Tienes un enlace de configuración? Pégalo aquí»**: copia el enlace del mensaje (mantén pulsado → Copiar, sin tocarlo), pégalo y pulsa **Usar** → **Conectar**.
-5. Si no ves ese campo, tienes una versión antigua guardada: borra el icono, abre la web otra vez en Safari y vuelve a instalarla.
+> [!IMPORTANT]
+> **iPhone: la app instalada sale como «usuario nuevo». Es normal y se arregla en 2 minutos.**
+> La app instalada guarda sus datos aparte de Safari, pero **tus datos siguen en tu hoja de Google**: solo hay que conectarla.
+> Un enlace tocado desde WhatsApp o Mensajes se abre en tu navegador por defecto, **no** dentro de la app instalada. Por eso el enlace se **pega** dentro de la app.
+
+1. **En el PC:** Ajustes → **🔗 Enlace para configurar otro móvil** → **📋 Copiar**.
+2. **Mándatelo a ti mismo** (WhatsApp «Mensajes guardados», un email…). **No lo compartas: lleva tu token.**
+3. **En el iPhone,** abre la app **desde el icono** (no desde Safari). Si sale «Bienvenido», pulsa el texto pequeño **«Saltar, ya sé usarla»**.
+4. Toca **⚙️ Ajustes** (la última pestaña de abajo, a la derecha) y baja hasta la tarjeta **«Conexión con tu hoja de Google»**.
+5. Debajo del botón «🔗 Enlace para configurar otro móvil» verás **«¿Tienes un enlace de configuración? Pégalo aquí»** y una casilla con el botón **Usar**.
+6. **Copia el enlace:** sal un momento a WhatsApp o Mensajes, mantén el dedo sobre el mensaje → **Copiar** (sin tocarlo para abrirlo).
+7. **Vuelve a la app** (desde el icono) → Ajustes, toca la casilla, mantén pulsado y elige **Pegar**.
+8. Pulsa **Usar**. Sale **«¿Conectar esta app?»** → **Conectar**.
+9. **Espera unos segundos:** arriba a la derecha debe poner **Sincronizado** y aparecen tus gastos y categorías.
+
+**Si algo no sale**
+
+| Qué ves | Qué hacer |
+|---|---|
+| «Ese texto no es un enlace de configuración» | Copiaste otra cosa. Copia el enlace entero: empieza por `https://imsothe.github.io/Finanzas/#c=`. |
+| No existe la casilla del enlace | Tienes una versión antigua guardada. Borra el icono (mantén pulsado → Eliminar app), abre la web en Safari y vuelve a instalarla. |
+| No pasa a «Sincronizado» | Mira el indicador de arriba. Revisa que la implementación de tu hoja sea **Cualquier usuario** (ver el paso 4). |
 
 Alternativa: teclear la URL y el token a mano en los dos campos de arriba de Ajustes.
 

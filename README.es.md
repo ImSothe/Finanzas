@@ -77,6 +77,17 @@ Ya está publicada en **https://imsothe.github.io/Finanzas/** (GitHub Pages, aut
 4. **Instalar**: Android/Chrome → menú ⋮ → *Instalar app*. iPhone/**Safari** → Compartir → *Añadir a pantalla de inicio*, y ábrela siempre desde el icono. En el iPhone la app instalada guarda sus datos aparte de Safari (sale como usuario nuevo): conéctala pegando el enlace de configuración en **Ajustes** (detalles en [docs/SETUP.es.md](docs/SETUP.es.md#instalarla-en-el-móvil)).
 5. **Otro móvil**: Ajustes → *🔗 Enlace para configurar otro móvil* → te lo envías a ti mismo y lo abres allí (te pide confirmar el servidor; así no escribes el token a mano), o lo **pegas** en Ajustes dentro de la app instalada.
 
+> [!IMPORTANT]
+> **iPhone: la app instalada sale como «usuario nuevo». Es normal, y se arregla en 2 minutos.**
+> Guarda sus datos aparte de Safari, pero tus datos siguen en tu hoja de Google. Para conectarla:
+> 1. En el PC: **Ajustes → 🔗 Enlace para configurar otro móvil → 📋 Copiar**, y mándatelo a ti mismo (no lo compartas: lleva tu token).
+> 2. En el iPhone, abre la app **desde el icono** (no desde Safari). En la bienvenida pulsa **«Saltar, ya sé usarla»**.
+> 3. Toca **⚙️ Ajustes** (abajo a la derecha) y baja a **«Conexión con tu hoja de Google»**.
+> 4. Copia el enlace del mensaje (mantén pulsado → **Copiar**, sin tocarlo), vuelve a la app y **pégalo** en la casilla *«¿Tienes un enlace de configuración? Pégalo aquí»* (mantén pulsado → **Pegar**).
+> 5. Pulsa **Usar** → **Conectar** y espera a que arriba ponga **Sincronizado**.
+>
+> Si sale *«Ese texto no es un enlace de configuración»*, copia el enlace entero (empieza por `https://imsothe.github.io/Finanzas/#c=`). Si no ves la casilla, tienes una versión antigua: borra el icono y vuelve a instalarla desde Safari. Guía completa: [docs/SETUP.es.md](docs/SETUP.es.md#instalarla-en-el-móvil).
+
 ## Cómo se usa
 
 - **➕ Hoy**: escribe el importe → concepto → Guardar. Al escribir `caf`, `figu`, `moto`… sugiere y **elige la categoría solo** (marca *auto ✨*; pulsa para cambiarla). Si le corriges una categoría, **lo aprende** y lo guarda en la hoja (pestaña *Diccionario*).
