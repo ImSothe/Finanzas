@@ -309,6 +309,7 @@
       if (!a || typeof a !== 'object' || Array.isArray(a)) delete c.ahorros; else c.ahorros = { base: Math.max(-MAXV, Math.min(MAXV, r2(fin(a.base)))), desde: ymOk(a.desde) || null };
     }
     if (c.cuentas !== undefined) c.cuentas = arr(c.cuentas).map(cleanCuenta).filter(Boolean).slice(0, 100);
+    if (c.nominas !== undefined) c.nominas = [...new Set(arr(c.nominas).map(ymOk).filter(Boolean))].sort().slice(-120);
     if (c.cuentasHist !== undefined) c.cuentasHist = arr(c.cuentasHist).map(cleanHist).filter(Boolean).slice(-400);
     if (c.plan !== undefined) { const pl = cleanPlan(c.plan); if (pl) c.plan = pl; else delete c.plan; }
     if (c.subsModo !== undefined && c.subsModo !== 'cobro') c.subsModo = 'prorrateo';

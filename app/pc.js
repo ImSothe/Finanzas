@@ -247,7 +247,8 @@
   function extrasView() {
     const lista = data().extras.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1)), vis = lista.slice(0, 200);
     const tipos = data().config.tiposExtra || [], tarifa = data().config.tarifaHora;
-    return head('🚀 Extras · horas extra y otros trabajos') + `<div class="small mut" style="margin:0 4px 12px">Apunta aquí lo que ganas aparte del sueldo. Para horas: nº de horas × € por hora. Si es un pago cerrado, usa “Pago fijo”. También puedes combinar las dos.</div>
+    const payBar = FF.payHas && FF.payHas() ? `<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="xPay" style="margin:0">💳 Ingresar en (para el extra nuevo)</label><select id="xPay" class="t" style="max-width:340px">${FF.payOptions('— No sumar a ninguna cuenta —')}</select></div>` : '';
+    return head('🚀 Extras · horas extra y otros trabajos') + payBar + `<div class="small mut" style="margin:0 4px 12px">Apunta aquí lo que ganas aparte del sueldo. Para horas: nº de horas × € por hora. Si es un pago cerrado, usa “Pago fijo”. También puedes combinar las dos.</div>
       <div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th style="min-width:220px">Tipo de extra</th><th class="r" style="width:100px">Nº horas</th><th class="r" style="width:110px">€ por hora</th><th class="r" style="width:120px">Pago fijo €</th><th class="r" style="width:120px">Total</th><th>Detalle</th><th style="width:50px"></th></tr></thead><tbody>
       <tr class="newrow"><td><input type="date" class="cell" id="xFec" value="${esc(st.x.fec || hoy())}"></td>
         <td><select class="cell" id="xTipo"><option value="">— tipo —</option>${tipos.map((t) => `<option>${esc(t)}</option>`).join('')}</select></td>
@@ -520,8 +521,9 @@
     if (!tipo) { shake($('#xTipo')); return; }
     const n2 = (x) => String(x).replace('.', ','), det = $('#xDet').value.trim(), horas = h > 0 && t > 0 ? `${n2(h)} h × ${n2(t)} €${f > 0 ? ' + ' + n2(f) + ' € fijos' : ''}` : '';
     FF.addExtraRow({ id: C.uuid(), fecha: $('#xFec').value || hoy(), tipo, importe: total, detalle: [horas, det].filter(Boolean).join(' · ') });
+    const pe = FF.payApply ? FF.payApply('extra', total) : '';
     if (t > 0 && t !== data().config.tarifaHora) FF.setConfig('tarifaHora', t);
-    FF.toast(`✓ Extra añadido: ${esc(fmt(total))}`); now();
+    FF.toast(`✓ Extra añadido: ${esc(fmt(total))}${pe ? ' · ' + esc(pe) : ''}`); now();
   }
 
   /* ---- deudas */

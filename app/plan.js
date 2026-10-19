@@ -46,6 +46,18 @@
       <text x="${pl}" y="${H - 6}" fill="#8f9cd0" font-size="10">${esc(h[0].f)}</text><text x="${W - 12}" y="${H - 6}" text-anchor="end" fill="#8f9cd0" font-size="10">${esc(h[h.length - 1].f)}</text></svg>`;
   }
 
+  /** Ingreso de la nómina del mes en la cuenta que elijas (efectivo incluido). */
+  function nominaCard(l) {
+    if (!l.length) return '';
+    const mk = C.monthKey(C.todayISO()), hecha = (data().config.nominas || []).includes(mk), sueldo = C.effectiveAt(data().config.sueldo, mk);
+    const pref = lsGet('ff.nomacc') || '';
+    return `<div class="card"><h2>💵 Nómina de ${esc(C.monthLabel(mk))}</h2>
+      <div class="small mut" style="margin-bottom:8px">${hecha ? '✅ Ya la has ingresado este mes. Puedes ingresar otra cantidad si cobras algo más.' : 'Cuando cobres, dime en qué cuenta entra y se suma a su saldo.'}</div>
+      <div class="pc-qrow"><div><label class="f">Importe (€)</label><input id="nmImp" type="number" step="0.01" min="0" class="t" value="${sueldo || ''}" style="max-width:150px;text-align:right"></div>
+        <div class="pc-grow"><label class="f">Ingresa en</label><select id="nmCta" class="t">${l.map((c) => `<option value="${esc(c.id)}" ${c.id === pref ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}</select></div>
+        <div class="pc-btns"><button class="btn pri" id="nmAdd" type="button">💵 Ingresar</button></div></div></div>`;
+  }
+
   function dineroView() {
     const p = patrimonio(), l = cuentas(), h = hist().slice(-30);
     const ult = l.map((c) => c.fecha).filter(Boolean).sort().pop();
@@ -62,6 +74,7 @@
           <td><input type="number" step="0.01" class="cell r" data-cu="${esc(c.id)}" data-f="saldo" value="${c.saldo}"></td>
           <td class="small mut">${esc(c.fecha || '–')}</td><td class="acc"><button class="ib" data-cudel="${esc(c.id)}" title="Quitar cuenta">🗑</button></td></tr>`).join('') || '<tr><td colspan="5" class="empty">Aún no has añadido ninguna cuenta. Empieza por tu cuenta del banco y el efectivo.</td></tr>'}
       </tbody></table></div>
+      ${nominaCard(l)}
       <div class="card"><h2>➕ Añadir una cuenta</h2><div class="pc-qrow">
         <div class="pc-grow"><label class="f">Nombre</label><input id="cuNom" class="t" placeholder="Cuenta nómina, Cartera, Hucha…" maxlength="80"></div>
         <div><label class="f">Tipo</label><select id="cuTipo" class="t">${Object.entries(TIPOS).map(([k, v]) => `<option value="${k}">${v}</option>`).join('')}</select></div>
@@ -188,19 +201,18 @@
   const payList = () => cuentas();
   const payId = () => { const id = lsGet('ff.pay') || ''; return payList().some((c) => c.id === id) ? id : ''; };
   FF.payHas = () => payList().length > 0;
-  FF.payOptions = () => `<option value="">— No descontar de ninguna cuenta —</option>${payList().map((c) => `<option value="${esc(c.id)}" ${c.id === payId() ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}`;
+  FF.payOptions = (vacio) => `<option value="">${esc(vacio || '— No descontar de ninguna cuenta —')}</option>${payList().map((c) => `<option value="${esc(c.id)}" ${c.id === payId() ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}`;
   /** Rellena el selector del móvil y lo oculta si no hay cuentas. */
   FF.payFill = () => { const w = $('#payWrap'), s = $('#payAcc'); if (!w || !s) return; w.hidden = !FF.payHas(); s.innerHTML = FF.payOptions(); };
   /** Aplica (o deshace) el efecto de un apunte en la cuenta elegida. Devuelve el texto para el aviso. */
-  FF.payApply = (tipo, importe, undo) => {
-    const id = payId(); if (!id) return '';
-    const c = cuentas().find((x) => x.id === id); if (!c) return '';
-    const d = C.payDelta(tipo, importe) * (undo ? -1 : 1); if (!d) return '';
+  function applyTo(id, d) {
+    const c = cuentas().find((x) => x.id === id); if (!c || !d) return '';
     saveCuentas(cuentas().map((x) => (x.id === id ? { ...x, saldo: C.r2(x.saldo + d), fecha: C.todayISO() } : x)));
     FF.payFill();
     return `${d < 0 ? '−' : '+'}${fmt(Math.abs(d))} en ${c.nombre}`;
-  };
-  document.addEventListener('change', (e) => { const t = e.target; if (t && (t.id === 'payAcc' || t.id === 'qPay' || t.id === 'nPay')) { lsSet('ff.pay', t.value); FF.payFill(); } });
+  }
+  FF.payApply = (tipo, importe, undo) => { const id = payId(); return id ? applyTo(id, C.payDelta(tipo, importe) * (undo ? -1 : 1)) : ''; };
+  document.addEventListener('change', (e) => { const t = e.target; if (t && (t.id === 'payAcc' || t.id === 'qPay' || t.id === 'nPay' || t.id === 'xPay')) { lsSet('ff.pay', t.value); FF.payFill(); } });
 
   pcMain.addEventListener('click', (e) => {
     if ($('#mdn')) {
@@ -210,6 +222,14 @@
         if (saldo == null) return shake($('#cuSaldo'));
         saveCuentas(cuentas().concat([{ id: C.uuid(), nombre, tipo: $('#cuTipo').value, saldo, fecha: C.todayISO() }]));
         FF.toast('✓ Cuenta añadida'); return FF.renderNow();
+      }
+      if (e.target.closest('#nmAdd')) {
+        const imp = num('nmImp'), id = ($('#nmCta') || {}).value;
+        if (imp == null || imp <= 0) return shake($('#nmImp'));
+        lsSet('ff.nomacc', id);
+        const msg = applyTo(id, imp), mk = C.monthKey(C.todayISO());
+        FF.setConfig('nominas', [...new Set([...(data().config.nominas || []), mk])]);
+        FF.toast('💵 Nómina ingresada · ' + esc(msg)); return FF.renderNow();
       }
       const d = e.target.closest('[data-cudel]');
       if (d) { if (confirm('¿Quitar esta cuenta?')) { saveCuentas(cuentas().filter((c) => c.id !== d.dataset.cudel)); FF.renderNow(); } return; }
