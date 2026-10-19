@@ -182,13 +182,13 @@
     FF.setConfig('plan', C.normConfig({ plan: o }).plan);
   }
 
-  /* ------------------------------------------------------------------ cuenta de pago: al apuntar un gasto se descuenta de ella (Efectivo no descuenta) */
+  /* ------------------------------------------------------------------ cuenta de pago: al apuntar un gasto se descuenta de ella (la opción vacía no descuenta) */
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } };
-  const payList = () => cuentas().filter((c) => c.tipo !== 'efectivo');
+  const payList = () => cuentas();
   const payId = () => { const id = lsGet('ff.pay') || ''; return payList().some((c) => c.id === id) ? id : ''; };
   FF.payHas = () => payList().length > 0;
-  FF.payOptions = () => `<option value="">💶 Efectivo (no descuenta)</option>${payList().map((c) => `<option value="${esc(c.id)}" ${c.id === payId() ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}`;
+  FF.payOptions = () => `<option value="">— No descontar de ninguna cuenta —</option>${payList().map((c) => `<option value="${esc(c.id)}" ${c.id === payId() ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}`;
   /** Rellena el selector del móvil y lo oculta si no hay cuentas. */
   FF.payFill = () => { const w = $('#payWrap'), s = $('#payAcc'); if (!w || !s) return; w.hidden = !FF.payHas(); s.innerHTML = FF.payOptions(); };
   /** Aplica (o deshace) el efecto de un apunte en la cuenta elegida. Devuelve el texto para el aviso. */
