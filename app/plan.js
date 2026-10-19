@@ -12,6 +12,11 @@
   const data = () => FF.data;
   const cuentas = () => (data().config.cuentas || []);
   const hist = () => (data().config.cuentasHist || []);
+  /* El saldo de una cuenta = saldo inicial (en la config) + suma de sus movimientos. Los movimientos solo se añaden, así dos dispositivos no se pisan. */
+  const movs = () => data().movs || [];
+  const efec = (c) => C.r2((Number(c.saldo) || 0) + movs().filter((m) => m.cuenta === c.id).reduce((a, m) => a + m.delta, 0));
+  const lastDate = (c) => movs().filter((m) => m.cuenta === c.id).map((m) => m.fecha).concat([c.fecha || '']).sort().pop();
+  const cuentasEf = () => cuentas().map((c) => ({ ...c, saldo: efec(c), fecha: lastDate(c) }));
   const TIPOS = { banco: '🏦 Banco', efectivo: '💶 Efectivo', ahorro: '🐖 Ahorro', inversion: '📈 Inversión', otro: '📦 Otro' };
   const PRESETS = { '50-30-20': '50 / 30 / 20 · clásico', '60-20-20': '60 / 20 / 20 · gastos altos', '70-20-10': '70 / 20 / 10 · ajustado', '50-20-30': '50 / 20 / 30 · ahorrador', custom: 'Personalizado' };
   const DEF = { preset: '50-30-20', pct: { nec: 50, des: 30, aho: 20 }, rentab: 6, anios: 20, inflacion: 2.5, comision: 0.3 };
@@ -23,7 +28,7 @@
   /* ------------------------------------------------------------------ datos derivados */
   const carteraTot = () => (FF.carteraTotals ? FF.carteraTotals() : { valor: 0, invertido: 0, porTipo: {}, n: 0 });
   function patrimonio() {
-    const a = C.accountTotals(cuentas()), cr = carteraTot();
+    const a = C.accountTotals(cuentasEf()), cr = carteraTot();
     return { ...a, cartera: cr.valor, total: C.r2(a.total + cr.valor), invertido: C.r2(a.por.inversion + cr.valor) };
   }
   /** Gasto mensual medio de los últimos 3 meses con movimiento (fijos + suscripciones + día a día). */
@@ -59,7 +64,7 @@
   }
 
   function dineroView() {
-    const p = patrimonio(), l = cuentas(), h = hist().slice(-30);
+    const p = patrimonio(), l = cuentasEf(), h = hist().slice(-30);
     const ult = l.map((c) => c.fecha).filter(Boolean).sort().pop();
     return `<div id="mdn">${head('💰 Mi dinero')}
       <div class="small mut" style="margin:0 4px 12px">Lo que tienes <b>ahora mismo</b>, cuenta a cuenta. Cuando apuntes gastos en la app, abre aquí y pon el saldo real que ves en tu banco: así este sitio siempre cuadra con la realidad. Se guarda en tu hoja y se ve igual en el PC y en el móvil.</div>
@@ -198,7 +203,7 @@
   /* ------------------------------------------------------------------ cuenta de pago: al apuntar un gasto se descuenta de ella (la opción vacía no descuenta) */
   const lsGet = (k) => { try { return localStorage.getItem(k); } catch (e) { return null; } };
   const lsSet = (k, v) => { try { localStorage.setItem(k, v); } catch (e) { /* sin almacenamiento */ } };
-  const payList = () => cuentas();
+  const payList = () => cuentasEf();
   /* Por defecto: la primera cuenta que no sea efectivo (si solo hay una cuenta, esa). El efectivo nunca se elige solo. Lo que elijas vale para un apunte y luego vuelve a la de por defecto. */
   let payChoice = null;
   const payDefault = () => { const l = payList(); if (l.length === 1) return l[0].id; const b = l.find((c) => c.tipo !== 'efectivo'); return b ? b.id : ''; };
@@ -208,29 +213,27 @@
   /** Rellena el selector del móvil y lo oculta si no hay cuentas. */
   FF.payFill = () => { const w = $('#payWrap'), s = $('#payAcc'); if (!w || !s) return; w.hidden = !FF.payHas(); s.innerHTML = FF.payOptions(); };
   /** Aplica (o deshace) el efecto de un apunte en la cuenta elegida. Devuelve el texto para el aviso. */
-  function applyTo(id, d) {
-    const c = cuentas().find((x) => x.id === id); if (!c || !d) return '';
-    saveCuentas(cuentas().map((x) => (x.id === id ? { ...x, saldo: C.r2(x.saldo + d), fecha: C.todayISO() } : x)));
+  function applyTo(id, d, nota, movId) {
+    const c = cuentasEf().find((x) => x.id === id); if (!c || !d) return '';
+    FF.addMov({ id: movId || C.uuid(), cuenta: id, delta: d, fecha: C.todayISO(), nota: nota || '' });
+    FF.setConfig('cuentasHist', C.snapshotTotal(hist(), C.todayISO(), patrimonio().total));
     FF.payFill();
     return `${d < 0 ? '−' : '+'}${fmt(Math.abs(d))} en ${c.nombre}`;
   }
-  /** undo: el id de la cuenta usada al apuntar (FF.payLastId), para devolver el saldo a esa misma cuenta. */
   FF.payApply = (tipo, importe, undo) => {
     const id = typeof undo === 'string' ? undo : payId();
     if (typeof undo !== 'string') { FF.payLastId = id; payChoice = null; }
-    return id ? applyTo(id, C.payDelta(tipo, importe) * (typeof undo === 'string' ? -1 : 1)) : '';
+    return id ? applyTo(id, C.payDelta(tipo, importe) * (typeof undo === 'string' ? -1 : 1), typeof undo === 'string' ? 'Deshacer' : (tipo === 'extra' ? 'Extra' : tipo === C.TIPO_DEV ? 'Devolución' : 'Gasto')) : '';
   };
   /** Aplica los movimientos automáticos vencidos (sueldo y suscripciones con cuenta) una sola vez y avisa. */
   FF.autoPost = () => {
-    const cfg = data().config, due = C.dueMovements(cfg, C.todayISO()).filter((m) => cuentas().some((c) => c.id === m.cuenta));
+    const cfg = data().config, ids = new Set(movs().map((m) => m.id));
+    const due = C.dueMovements(cfg, C.todayISO(), ids).filter((m) => cuentas().some((c) => c.id === m.cuenta));
     if (!due.length) return;
-    const saldos = {};
-    cuentas().forEach((c) => { saldos[c.id] = c.saldo; });
-    due.forEach((m) => { saldos[m.cuenta] = C.r2(saldos[m.cuenta] + m.delta); });
-    saveCuentas(cuentas().map((c) => ({ ...c, saldo: saldos[c.id], fecha: due.some((m) => m.cuenta === c.id) ? C.todayISO() : c.fecha })));
-    FF.setConfig('aplicados', (cfg.aplicados || []).concat(due.map((m) => m.key)));
+    due.forEach((m) => FF.addMov({ id: m.id, cuenta: m.cuenta, delta: m.delta, fecha: m.fecha, nota: m.concepto }));
     const nom = due.filter((m) => m.key.startsWith('s|')).map((m) => m.mes);
     if (nom.length) FF.setConfig('nominas', [...new Set([...(cfg.nominas || []), ...nom])]);
+    FF.setConfig('cuentasHist', C.snapshotTotal(hist(), C.todayISO(), patrimonio().total));
     const name = (id) => (cuentas().find((c) => c.id === id) || {}).nombre || '';
     FF.toast('🤖 Movimientos automáticos: ' + due.slice(0, 4).map((m) => `${m.delta < 0 ? '−' : '+'}${fmt(Math.abs(m.delta))} ${esc(m.concepto)} (${esc(name(m.cuenta))})`).join(' · ') + (due.length > 4 ? ` y ${due.length - 4} más` : ''));
     FF.payFill();
@@ -251,7 +254,7 @@
         const imp = num('nmImp'), id = ($('#nmCta') || {}).value;
         if (imp == null || imp <= 0) return shake($('#nmImp'));
         lsSet('ff.nomacc', id);
-        const msg = applyTo(id, imp), mk = C.monthKey(C.todayISO());
+        const msg = applyTo(id, imp, 'Nómina'), mk = C.monthKey(C.todayISO());
         FF.setConfig('nominas', [...new Set([...(data().config.nominas || []), mk])]);
         FF.toast('💵 Nómina ingresada · ' + esc(msg)); return FF.renderNow();
       }
@@ -272,7 +275,7 @@
       const f = t.dataset.f, id = t.dataset.cu;
       if (f === 'nombre') { const n = C.nameOk(t.value); if (!n) { FF.toast('Pon un nombre'); return FF.renderNow(); } saveCuentas(cuentas().map((c) => (c.id === id ? { ...c, nombre: n } : c))); }
       else if (f === 'tipo') saveCuentas(cuentas().map((c) => (c.id === id ? { ...c, tipo: t.value } : c)));
-      else { const v = C.parseAmount(t.value); if (v == null) { FF.toast('Número no válido'); return FF.renderNow(); } saveCuentas(cuentas().map((c) => (c.id === id ? { ...c, saldo: v, fecha: C.todayISO() } : c))); }
+      else { const v = C.parseAmount(t.value); if (v == null) { FF.toast('Número no válido'); return FF.renderNow(); } const cur = cuentasEf().find((c) => c.id === id); if (cur) applyTo(id, C.r2(v - cur.saldo), 'Ajuste manual'); }
       FF.toast('✓ Guardado'); return FF.renderNow();
     }
     if (!$('#pln')) return;

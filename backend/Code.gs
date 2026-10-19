@@ -19,9 +19,10 @@
 
 var APP_VERSION = 1;
 var TZ_DEFAULT = 'Europe/Madrid';
-var SH = { gastos: 'Gastos', extras: 'Extras', config: 'Config', dic: 'Diccionario' };
+var SH = { gastos: 'Gastos', extras: 'Extras', config: 'Config', dic: 'Diccionario', mov: 'Movimientos' };
 var HEAD_GASTOS = ['Fecha', 'Categoría', 'Importe', 'Tipo', 'Detalle', 'Comercio', 'Detalle_Items', 'TicketID', 'Origen', 'ID', 'Creado'];
 var HEAD_EXTRAS = ['Fecha', 'Tipo de extra', 'Importe', 'Detalle', 'ID', 'Creado'];
+var HEAD_MOV = ['Fecha', 'Cuenta', 'Importe', 'Nota', 'ID', 'Creado'];
 var TIPOS = ['Gasto', 'Devolución 🔄'];
 
 /* Datos de arranque (categorías, sueldo, fijos, diccionario). Se rellenan al ejecutar "Configurar" solo si las pestañas están vacías. */
@@ -42,6 +43,7 @@ function setup() {
   if (excelMode_()) return setupExcelMode_();
   ensureSheet_(ss, SH.gastos, HEAD_GASTOS, { 0: 'dd/mm/yyyy', 2: '#,##0.00' }, [100, 260, 90, 100, 320, 160, 260, 120, 90, 110, 150]);
   ensureSheet_(ss, SH.extras, HEAD_EXTRAS, { 0: 'dd/mm/yyyy', 2: '#,##0.00' }, [100, 220, 90, 320, 110, 150]);
+  ensureSheet_(ss, SH.mov, HEAD_MOV, { 0: 'dd/mm/yyyy', 2: '#,##0.00' }, [100, 200, 100, 260, 200, 150]);
   var cfg = ensureSheet_(ss, SH.config, ['Clave', 'Valor (JSON)'], {}, [160, 700]);
   var dic = ensureSheet_(ss, SH.dic, ['Clave', 'Categoría', 'Veces', 'Origen'], {}, [200, 320, 70, 100]);
   if (cfg.getLastRow() < 2) {
@@ -175,6 +177,41 @@ function readExtras_() {
     out.push({ id: String(r[4]), fecha: dateOut_(r[0]), tipo: String(r[1] || ''), importe: imp, detalle: String(r[3] || '') });
   });
   return out;
+}
+
+/* Movimientos de las cuentas (sueldo, gastos pagados con una cuenta…). Solo se AÑADEN filas, nunca se pisa un saldo: así dos dispositivos a la vez no se estropean.
+   El saldo de una cuenta = su saldo inicial (en Config) + la suma de sus movimientos. Un mismo ID no se duplica. */
+function readMovs_() {
+  var sh = SpreadsheetApp.getActive().getSheetByName(SH.mov);
+  if (!sh || sh.getLastRow() < 2) return [];
+  var out = [];
+  sh.getRange(2, 1, sh.getLastRow() - 1, HEAD_MOV.length).getValues().forEach(function (r) {
+    var imp = num_(r[2]);
+    if (imp === null || !r[4]) return;
+    out.push({ id: String(r[4]), fecha: dateOut_(r[0]), cuenta: String(r[1] || ''), delta: imp, nota: String(r[3] || '') });
+  });
+  return out;
+}
+
+function addMovs_(rows) {
+  var ss = SpreadsheetApp.getActive();
+  var sh = ss.getSheetByName(SH.mov) || ensureSheet_(ss, SH.mov, HEAD_MOV, { 0: 'dd/mm/yyyy', 2: '#,##0.00' }, [100, 200, 100, 260, 200, 150]);
+  var seen = existingIds_(sh, 5), out = [], skipped = 0, now = new Date();
+  rowsOf_(rows, 200).forEach(function (r) {
+    var imp = num_(r.delta), f = /^\d{4}-\d{2}-\d{2}$/.test(String(r.fecha)) ? String(r.fecha) : null;
+    var id = String(r.id), cuenta = String(r.cuenta);
+    if (imp === null || Math.abs(imp) > 1e9 || !f || !idOk_(id) || !idOk_(cuenta)) throw new Error('Movimiento inválido (fecha/importe/id/cuenta)');
+    if (seen[id]) { skipped++; return; }
+    seen[id] = true;
+    out.push([dateIn_(f), cuenta, imp, str_(r.nota, 120), id, now]);
+  });
+  if (out.length) {
+    var start = sh.getLastRow() + 1;
+    plain_(sh, start, 2, out.length, 1); plain_(sh, start, 4, out.length, 2);        // cuenta, nota, id
+    sh.getRange(start, 1, out.length, HEAD_MOV.length).setValues(out);
+    sh.getRange(start, 1, out.length, 1).setNumberFormat('dd/mm/yyyy');
+  }
+  return { added: out.length, skipped: skipped };
 }
 
 function readConfig_() {
@@ -474,7 +511,7 @@ function doPost(e) {
     try {
       if (body.action === 'rev') return json_({ ok: true, rev: rev_() });
       if (body.action === 'info') return json_({ ok: true, app: 'FinanzasApp', v: APP_VERSION, mode: excelMode_() ? 'excel' : 'hoja' });
-      return json_({ ok: true, v: APP_VERSION, rev: rev_(), config: readConfig_(), diccionario: readDic_(), gastos: readGastos_(), extras: readExtras_() });
+      return json_({ ok: true, v: APP_VERSION, rev: rev_(), config: readConfig_(), diccionario: readDic_(), gastos: readGastos_(), extras: readExtras_(), movs: readMovs_() });
     } catch (err) { return fail_(String(err && err.message ? err.message : err), 'exception'); }
   }
   var lock = LockService.getScriptLock();
@@ -488,6 +525,7 @@ function doPost(e) {
       case 'delete': res = excelMode_() ? xlDelete_(body.sheet === 'extras', body.id) : deleteById_(body.sheet === 'extras' ? SH.extras : SH.gastos, body.sheet === 'extras' ? 5 : 10, body.id); break;
       case 'dictSet': res = dictSet_(body.k, body.c, body.s); break;
       case 'dictDel': res = dictDel_(body.k); break;
+      case 'addMov': res = addMovs_(body.rows || []); break;
       case 'configSet': res = configSet_(body.key, body.value); break;
       default: return fail_('Acción desconocida', 'bad-action');
     }

@@ -15,7 +15,7 @@
   const save = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* almacenamiento lleno o bloqueado */ } };
 
   const cfg = Object.assign({ url: '', token: '', gKey: '', gModel: 'gemini-2.5-flash', gBase: 'https://generativelanguage.googleapis.com' }, load(LS.cfg, {}));
-  let data = Object.assign({ rev: null, config: { categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, diccionario: [], gastos: [], extras: [] }, load(LS.data, {}));
+  let data = Object.assign({ rev: null, config: { categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, diccionario: [], gastos: [], extras: [], movs: [] }, load(LS.data, {}));
   let queue = load(LS.queue, []);
   let index = C.buildIndex(data.diccionario);
   const ui = { mk: C.monthKey(C.todayISO()), view: 'home', cat: null, catAuto: false, tipo: 'Gasto', fecha: null, net: 'idle', histLimit: 60, suggestSel: -1, resMode: 'mes', resYear: new Date().getFullYear(), rFrom: null, rTo: null, resAll: false };
@@ -78,6 +78,7 @@
         let res;
         try { res = await apiPost(Object.assign({ action: op.action }, op.payload)); } catch (e) { ui.net = 'offline'; break; }
         if (res && res.ok) { queue.shift(); persistQueue(); ui.net = 'idle'; continue; }
+        if (res && res.code === 'bad-action' && op.action === 'addMov') { queue.shift(); persistQueue(); FF.movsLegacy = true; if (!FF.movsWarned) { FF.movsWarned = true; toast('⚠️ Tu script de Google es antiguo: pega el nuevo Code.gs y vuelve a implementar para sincronizar los saldos entre dispositivos.'); } continue; }
         if (res && res.code === 'auth') { ui.net = 'auth'; toast('⚠️ Token incorrecto: revisa Ajustes'); break; }
         if (res && res.code === 'busy' && (op.tries = (op.tries || 0) + 1) < 5) { await wait(1500); continue; }
         queue.shift(); persistQueue();                                       // error de validación: no reintentar eternamente
@@ -92,6 +93,7 @@
       const p = op.payload;
       if (op.action === 'add') p.rows.forEach((r) => { if (!data.gastos.some((g) => g.id === r.id)) data.gastos.push(r); });
       else if (op.action === 'addExtra') p.rows.forEach((r) => { if (!data.extras.some((g) => g.id === r.id)) data.extras.push(r); });
+      else if (op.action === 'addMov') p.rows.forEach((r) => { if (!(data.movs || []).some((g) => g.id === r.id)) (data.movs = data.movs || []).push(r); });
       else if (op.action === 'delete') { if (p.sheet === 'extras') data.extras = data.extras.filter((g) => g.id !== p.id); else data.gastos = data.gastos.filter((g) => g.id !== p.id); }
       else if (op.action === 'update') { const g = data.gastos.find((x) => x.id === p.id); if (g) Object.assign(g, p.fields); }
       else if (op.action === 'dictSet') dictLocal(p.k, p.c, p.s);
@@ -111,7 +113,9 @@
       if (!force && meta.rev === data.rev) { ui.net = 'idle'; return true; }
       const d = await apiRead('data');
       if (!d.ok) { ui.net = 'offline'; return false; }
-      data = { rev: d.rev, config: C.normConfig(Object.assign({ categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, d.config)), diccionario: d.diccionario || [], gastos: d.gastos || [], extras: d.extras || [] };
+      data = { rev: d.rev, config: C.normConfig(Object.assign({ categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, d.config)), diccionario: d.diccionario || [], gastos: d.gastos || [], extras: d.extras || [],
+        movs: Array.isArray(d.movs) ? d.movs.map(C.cleanMov).filter(Boolean) : (data.movs || []) };
+      FF.movsLegacy = !Array.isArray(d.movs);                                  // script de Google antiguo: aún no guarda movimientos
       overlayQueue(); rebuildIndex(); persistData(); ui.net = 'idle';
       if (FF.autoPost) setTimeout(FF.autoPost, 0);
       if (FF.pinSync) setTimeout(FF.pinSync, 0);
@@ -555,6 +559,7 @@
 
   /** Guarda una clave de configuración (deudas, ahorros, sueldo, fijos…) en local y en la hoja. */
   function setConfig(key, value) { if (key === 'categorias') value = C.sortCats(value); data.config[key] = value; persistData(); enqueue('configSet', { key, value }); }
+  function addMov(row) { const m = C.cleanMov(row); if (!m) return null; (data.movs = data.movs || []).push(m); persistData(); enqueue('addMov', { rows: [m] }); return m; }
   function addExtraRow(row) { data.extras.push(row); persistData(); enqueue('addExtra', { rows: [row] }); }
   function delExtra(id) { data.extras = data.extras.filter((x) => x.id !== id); persistData(); enqueue('delete', { sheet: 'extras', id }); }
 
@@ -868,7 +873,7 @@
       data: { get: () => data, enumerable: true }, cfg: { get: () => cfg, enumerable: true },
       index: { get: () => index, enumerable: true }, queue: { get: () => queue, enumerable: true },
     });
-    Object.assign(FF, { ui, enqueue, addGastos, addExtraRow, delExtra, delGasto,
+    Object.assign(FF, { ui, enqueue, addGastos, addMov, addExtraRow, delExtra, delGasto,
       learn, persist: persistData, openSheet, pickCategory, scan: scanFile, toast, esc, cats, openDetail, goMobile, renderAll, refresh, flush, rebuildIndex, loadDefaultCats,
       shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, diagnose, defaultCats: DEFAULT_CATS.slice(), loadXLSX: () => loadXLSX() });
     if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__ff = { get data() { return data; }, get queue() { return queue; }, get cfg() { return cfg; }, ui, refresh, flush, go, renderAll, scan: scanFile, save: saveCfg };

@@ -217,32 +217,33 @@
   }
   /** Movimientos automáticos pendientes: el sueldo entra en su cuenta el día elegido y cada suscripción se carga en la suya el día de cobro.
       Solo cuenta desde "autoDesde" hasta hoy y no repite lo ya aplicado (claves en "aplicados"; una nómina ingresada a mano también cuenta). */
-  function dueMovements(cfg, hoyISO) {
+  const movId = (key) => 'auto-' + hashStr(key);                                // mismo movimiento = mismo id en cualquier dispositivo: el servidor no lo duplica
+  function dueMovements(cfg, hoyISO, ids) {
     const out = [], desde = cfg.autoDesde;
     if (!desde || desde > hoyISO) return out;
-    const hecho = new Set(cfg.aplicados || []);
+    const hecho = new Set(cfg.aplicados || []), yaIds = ids || new Set();
     const dias = (mk) => new Date(parseInt(mk.slice(0, 4), 10), parseInt(mk.slice(5, 7), 10), 0).getDate();
     const fechaDe = (mk, d) => `${mk}-${String(Math.min(Math.max(1, Math.round(Number(d) || 1)), dias(mk))).padStart(2, '0')}`;
     for (let mk = monthKey(desde); mk <= monthKey(hoyISO); mk = shiftMonth(mk, 1)) {
       const sc = cfg.sueldoCuenta;
       if (sc && sc.id) {
         const f = fechaDe(mk, sc.dia), amt = effectiveAt(cfg.sueldo, mk), key = `s|${mk}`;
-        if (amt > 0 && f >= desde && f <= hoyISO && !hecho.has(key) && !(cfg.nominas || []).includes(mk)) out.push({ key, cuenta: sc.id, delta: r2(amt), fecha: f, concepto: 'Sueldo', mes: mk });
+        if (amt > 0 && f >= desde && f <= hoyISO && !hecho.has(key) && !yaIds.has(movId(key)) && !(cfg.nominas || []).includes(mk)) out.push({ key, id: movId(key), cuenta: sc.id, delta: r2(amt), fecha: f, concepto: 'Sueldo', mes: mk });
       }
       Object.keys(cfg.fijosCuenta || {}).forEach((cat) => {                    // gastos fijos de cada categoría: se descuentan el día 1 de su cuenta
         if (/suscripci/i.test(cat)) return;
         const amt = effectiveAt((cfg.fijos || {})[cat], mk), f = fechaDe(mk, 1), key = `f|${cat}|${mk}`;
-        if (amt > 0 && f >= desde && f <= hoyISO && !hecho.has(key)) out.push({ key, cuenta: cfg.fijosCuenta[cat], delta: -r2(amt), fecha: f, concepto: cat.replace(/\s*\(.*$/, ''), mes: mk });
+        if (amt > 0 && f >= desde && f <= hoyISO && !hecho.has(key) && !yaIds.has(movId(key))) out.push({ key, id: movId(key), cuenta: cfg.fijosCuenta[cat], delta: -r2(amt), fecha: f, concepto: cat.replace(/\s*\(.*$/, ''), mes: mk });
       });
       (cfg.ingresos || []).forEach((i) => {                                     // ingresos pasivos: suman en su cuenta el día elegido
         if (!i.cuenta || i.activa === false || (i.desde && mk < i.desde)) return;
         const f = fechaDe(mk, i.dia), key = `i|${i.id}|${mk}`;
-        if (i.importe > 0 && f >= desde && f <= hoyISO && !hecho.has(key)) out.push({ key, cuenta: i.cuenta, delta: r2(i.importe), fecha: f, concepto: i.nombre, mes: mk });
+        if (i.importe > 0 && f >= desde && f <= hoyISO && !hecho.has(key) && !yaIds.has(movId(key))) out.push({ key, id: movId(key), cuenta: i.cuenta, delta: r2(i.importe), fecha: f, concepto: i.nombre, mes: mk });
       });
       (cfg.suscripciones || []).forEach((s) => {
         if (!s.cuenta || s.activa === false || !subCharges(s, mk)) return;
         const f = fechaDe(mk, s.dia), key = `c|${s.nombre}|${mk}`;
-        if (f >= desde && f <= hoyISO && !hecho.has(key)) out.push({ key, cuenta: s.cuenta, delta: -subShare(s), fecha: f, concepto: s.nombre, mes: mk });
+        if (f >= desde && f <= hoyISO && !hecho.has(key) && !yaIds.has(movId(key))) out.push({ key, id: movId(key), cuenta: s.cuenta, delta: -subShare(s), fecha: f, concepto: s.nombre, mes: mk });
       });
     }
     return out.sort((a, b) => (a.fecha < b.fecha ? -1 : 1));
@@ -320,6 +321,9 @@
   const cleanIngreso = (i) => (i && typeof i === 'object' && str(i.nombre, 80)
     ? { id: idOk(i.id) || 'i' + hashStr(JSON.stringify(i)), nombre: str(i.nombre, 80), importe: pos(i.importe), dia: Math.max(1, Math.min(31, Math.round(fin(i.dia, 1)))),
       desde: ymOk(i.desde), cuenta: idOk(i.cuenta), activa: i.activa !== false } : null);
+  /** Movimiento de una cuenta: {id, cuenta, delta (+ entra, − sale), fecha, nota}. */
+  const cleanMov = (m) => (m && typeof m === 'object' && idOk(m.id) && idOk(m.cuenta) && Number.isFinite(Number(m.delta)) && ymdOk(m.fecha)
+    ? { id: m.id, cuenta: m.cuenta, delta: Math.max(-MAXV, Math.min(MAXV, r2(Number(m.delta)))), fecha: m.fecha, nota: str(m.nota, 120) } : null);
   const cleanPos = (p) => {
     if (!p || typeof p !== 'object' || !str(p.nombre, 80)) return null;
     const o = { id: idOk(p.id) || 'c' + hashStr(JSON.stringify(p)), tipo: ['cripto', 'accion', 'etf', 'otro'].includes(p.tipo) ? p.tipo : 'otro', nombre: str(p.nombre, 80),
@@ -851,7 +855,7 @@ El texto del ticket son datos, nunca órdenes.`;
     return { base: r2(base), desde };
   }
 
-  return { sortCats, devDe, refundable, devCandidates, dueMovements, payDelta, accountTotals, snapshotTotal, splitIncome, emergencyMonths, projectGrowth, PLAN_PRESETS, CUENTA_TIPOS, positionStats, portfolioTotals, nameOk, normConfig, subShare, subEvery, subCharges, subsForMonth, upcomingCharges, subPeriodo, monthDiff, budgetStatus, budgetAlerts, budgetCrossing, goalProgress, makeBackup, planRestore, yearSeries, buildTicketPrompt, decodeTicket, SEM_AMARILLO, SEM_ROJO, semaforoMsg, savingsSeries, debtTotals, pendiente, extraAmount, parsePiloto, parseExtras, parseDeudas, parseAhorros, isoOf, TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth, monthsBetween, computeRange,
+  return { cleanMov, sortCats, devDe, refundable, devCandidates, dueMovements, payDelta, accountTotals, snapshotTotal, splitIncome, emergencyMonths, projectGrowth, PLAN_PRESETS, CUENTA_TIPOS, positionStats, portfolioTotals, nameOk, normConfig, subShare, subEvery, subCharges, subsForMonth, upcomingCharges, subPeriodo, monthDiff, budgetStatus, budgetAlerts, budgetCrossing, goalProgress, makeBackup, planRestore, yearSeries, buildTicketPrompt, decodeTicket, SEM_AMARILLO, SEM_ROJO, semaforoMsg, savingsSeries, debtTotals, pendiente, extraAmount, parsePiloto, parseExtras, parseDeudas, parseAhorros, isoOf, TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth, monthsBetween, computeRange,
     buildIndex, predictCategory, suggest, topChips, matchCategory, normalizeTicket, groupLines, dominantCategory, legible, splitRows, singleRow,
     parseItems, ticketOf, searchGastos, hashStr, importRows };
 });
