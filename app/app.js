@@ -554,7 +554,7 @@
   }
 
   /** Guarda una clave de configuración (deudas, ahorros, sueldo, fijos…) en local y en la hoja. */
-  function setConfig(key, value) { data.config[key] = value; persistData(); enqueue('configSet', { key, value }); }
+  function setConfig(key, value) { if (key === 'categorias') value = C.sortCats(value); data.config[key] = value; persistData(); enqueue('configSet', { key, value }); }
   function addExtraRow(row) { data.extras.push(row); persistData(); enqueue('addExtra', { rows: [row] }); }
   function delExtra(id) { data.extras = data.extras.filter((x) => x.id !== id); persistData(); enqueue('delete', { sheet: 'extras', id }); }
 

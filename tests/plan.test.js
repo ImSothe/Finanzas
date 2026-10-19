@@ -104,3 +104,11 @@ test('devolución ligada a su compra: resta en el mes y la categoría de la comp
   assert.equal(C.devCandidates([compra, { ...dev, importe: 100 }]).length, 0);  // ya devuelta entera
   assert.equal(C.devDe(dev), 'c1'); assert.equal(C.devDe(compra), '');
 });
+
+test('"Otros" siempre es la última categoría, también al añadir otras después', () => {
+  const l = ['🏠 Vivienda', '📦 Otros', '🐾 Mascota', '🚗 Coche'];
+  assert.deepEqual(C.sortCats(l), ['🏠 Vivienda', '🐾 Mascota', '🚗 Coche', '📦 Otros']);
+  assert.deepEqual(C.sortCats([{ nombre: '📦 Otros' }, { nombre: 'A' }]).map((c) => c.nombre), ['A', '📦 Otros']);
+  assert.deepEqual(C.normConfig({ categorias: ['📦 Otros', 'Zeta', 'Alfa'] }).categorias.map((c) => c.nombre), ['Zeta', 'Alfa', '📦 Otros']);
+  assert.deepEqual(C.sortCats(['Otros motivos', 'B', 'Otros']), ['Otros motivos', 'B', 'Otros']);   // solo se mueve la categoría llamada exactamente "Otros"
+});
