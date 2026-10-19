@@ -112,3 +112,18 @@ test('"Otros" siempre es la última categoría, también al añadir otras despu�
   assert.deepEqual(C.normConfig({ categorias: ['📦 Otros', 'Zeta', 'Alfa'] }).categorias.map((c) => c.nombre), ['Zeta', 'Alfa', '📦 Otros']);
   assert.deepEqual(C.sortCats(['Otros motivos', 'B', 'Otros']), ['Otros motivos', 'B', 'Otros']);   // solo se mueve la categoría llamada exactamente "Otros"
 });
+
+test('fijos con cuenta y suscripciones se descuentan, el sueldo y los ingresos pasivos suman; los pasivos cuentan como ganado', () => {
+  const cfg = { autoDesde: '2026-10-01', sueldo: [{ desde: '2026-01', importe: 1500 }], sueldoCuenta: { id: 'n', dia: 1 },
+    fijos: { '🏠 Vivienda (alquiler)': [{ desde: '2026-01', importe: 500 }], '🎮 Suscripciones': [{ desde: '2026-01', importe: 99 }] },
+    fijosCuenta: { '🏠 Vivienda (alquiler)': 'n', '🎮 Suscripciones': 'n' },
+    ingresos: [{ id: 'i1', nombre: 'Alquiler cobrado', importe: 300, dia: 5, desde: '2026-10', cuenta: 'h', activa: true }, { id: 'i2', nombre: 'Apagado', importe: 50, dia: 5, cuenta: 'h', activa: false }] };
+  const m = C.dueMovements(cfg, '2026-10-10');
+  assert.deepEqual(m.map((x) => [x.key, x.delta, x.cuenta]), [['s|2026-10', 1500, 'n'], ['f|🏠 Vivienda (alquiler)|2026-10', -500, 'n'], ['i|i1|2026-10', 300, 'h']]);   // las suscripciones no se cuentan como fijo
+  const data = { config: { categorias: [{ nombre: '🏠 Vivienda (alquiler)', presupuesto: null }], sueldo: cfg.sueldo, fijos: cfg.fijos, ingresos: cfg.ingresos }, gastos: [], extras: [] };
+  const mes = C.computeMonth(data, '2026-10');
+  assert.equal(mes.pasivos, 300); assert.equal(mes.entra, 1800); assert.equal(C.computeMonth(data, '2026-09').pasivos, 0);
+  const l = C.normConfig({ ingresos: [{ nombre: 'X', importe: '12,5', dia: 99, cuenta: '<mal>' }, { nombre: '' }], fijosCuenta: { '__proto__': 'a', 'Ok': 'id1', 'Mal': '<x>' } });
+  assert.equal(l.ingresos.length, 1); assert.equal(l.ingresos[0].dia, 31); assert.equal(l.ingresos[0].cuenta === '' || l.ingresos[0].cuenta === undefined, true);
+  assert.deepEqual(l.fijosCuenta, { Ok: 'id1' });
+});

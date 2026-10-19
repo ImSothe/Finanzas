@@ -229,6 +229,16 @@
         const f = fechaDe(mk, sc.dia), amt = effectiveAt(cfg.sueldo, mk), key = `s|${mk}`;
         if (amt > 0 && f >= desde && f <= hoyISO && !hecho.has(key) && !(cfg.nominas || []).includes(mk)) out.push({ key, cuenta: sc.id, delta: r2(amt), fecha: f, concepto: 'Sueldo', mes: mk });
       }
+      Object.keys(cfg.fijosCuenta || {}).forEach((cat) => {                    // gastos fijos de cada categoría: se descuentan el día 1 de su cuenta
+        if (/suscripci/i.test(cat)) return;
+        const amt = effectiveAt((cfg.fijos || {})[cat], mk), f = fechaDe(mk, 1), key = `f|${cat}|${mk}`;
+        if (amt > 0 && f >= desde && f <= hoyISO && !hecho.has(key)) out.push({ key, cuenta: cfg.fijosCuenta[cat], delta: -r2(amt), fecha: f, concepto: cat.replace(/\s*\(.*$/, ''), mes: mk });
+      });
+      (cfg.ingresos || []).forEach((i) => {                                     // ingresos pasivos: suman en su cuenta el día elegido
+        if (!i.cuenta || i.activa === false || (i.desde && mk < i.desde)) return;
+        const f = fechaDe(mk, i.dia), key = `i|${i.id}|${mk}`;
+        if (i.importe > 0 && f >= desde && f <= hoyISO && !hecho.has(key)) out.push({ key, cuenta: i.cuenta, delta: r2(i.importe), fecha: f, concepto: i.nombre, mes: mk });
+      });
       (cfg.suscripciones || []).forEach((s) => {
         if (!s.cuenta || s.activa === false || !subCharges(s, mk)) return;
         const f = fechaDe(mk, s.dia), key = `c|${s.nombre}|${mk}`;
@@ -307,6 +317,9 @@
     if (p.aporte != null && p.aporte !== '' && fin(p.aporte, -1) >= 0) o.aporte = pos(p.aporte);
     return o;
   };
+  const cleanIngreso = (i) => (i && typeof i === 'object' && str(i.nombre, 80)
+    ? { id: idOk(i.id) || 'i' + hashStr(JSON.stringify(i)), nombre: str(i.nombre, 80), importe: pos(i.importe), dia: Math.max(1, Math.min(31, Math.round(fin(i.dia, 1)))),
+      desde: ymOk(i.desde), cuenta: idOk(i.cuenta), activa: i.activa !== false } : null);
   const cleanPos = (p) => {
     if (!p || typeof p !== 'object' || !str(p.nombre, 80)) return null;
     const o = { id: idOk(p.id) || 'c' + hashStr(JSON.stringify(p)), tipo: ['cripto', 'accion', 'etf', 'otro'].includes(p.tipo) ? p.tipo : 'otro', nombre: str(p.nombre, 80),
@@ -349,6 +362,12 @@
     if (c.cuentas !== undefined) c.cuentas = arr(c.cuentas).map(cleanCuenta).filter(Boolean).slice(0, 100);
     if (c.sueldoCuenta !== undefined) { const sc = c.sueldoCuenta; if (sc && typeof sc === 'object' && !Array.isArray(sc) && idOk(sc.id)) c.sueldoCuenta = { id: sc.id, dia: Math.max(1, Math.min(31, Math.round(fin(sc.dia, 1)))) }; else delete c.sueldoCuenta; }
     if (c.autoDesde !== undefined && !ymdOk(c.autoDesde)) delete c.autoDesde;
+    if (c.ingresos !== undefined) c.ingresos = arr(c.ingresos).map(cleanIngreso).filter(Boolean).slice(0, 100);
+    if (c.fijosCuenta !== undefined) {
+      const fc = c.fijosCuenta, o = {};
+      if (fc && typeof fc === 'object' && !Array.isArray(fc)) Object.keys(fc).forEach((k) => { const n = nameOk(k); if (n && n === k && idOk(fc[k])) o[n] = fc[k]; });
+      c.fijosCuenta = o;
+    }
     if (c.pin !== undefined && c.pin !== null) {
       const p = c.pin;
       if (p && typeof p === 'object' && p.v === 2 && /^[0-9a-f]{32}$/.test(String(p.s)) && /^[0-9a-f]{64}$/.test(String(p.h))) c.pin = { v: 2, s: p.s, i: Math.min(1e6, Math.max(1000, Math.round(fin(p.i, 210000)))), h: p.h }; else delete c.pin;
@@ -370,7 +389,9 @@
     const subs = subsForMonth(cfg, mk, cats.map((c) => c.nombre));
     const subsTotal = subs.total;
     const sueldo = effectiveAt(cfg.sueldo, mk);
-    const extras = (data.extras || []).filter((e) => monthKey(e.fecha) === mk).reduce((a, e) => a + (Number(e.importe) || 0), 0);
+    const extras0 = (data.extras || []).filter((e) => monthKey(e.fecha) === mk).reduce((a, e) => a + (Number(e.importe) || 0), 0);
+    const pasivos = r2((cfg.ingresos || []).filter((i) => i.activa !== false && (!i.desde || mk >= i.desde)).reduce((a, i) => a + (Number(i.importe) || 0), 0));
+    const extras = extras0 + pasivos;                                          // los ingresos pasivos suman con los extras
 
     const porCat = Object.create(null);
     const fijosCfg = cfg.fijos && typeof cfg.fijos === 'object' ? cfg.fijos : {};
@@ -399,7 +420,7 @@
     filas.sort((a, b) => b.total - a.total);
     const pctGastado = entra > 0 ? sale / entra : (sale > 0 ? 1 : 0);
     const semaforo = entra === 0 && sale === 0 ? 'vacio' : pctGastado >= SEM_ROJO ? 'rojo' : pctGastado >= SEM_AMARILLO ? 'amarillo' : 'verde';
-    return { mk, sueldo: r2(sueldo), extras: r2(extras), entra, fijos, subs: r2(subsTotal), dia, sale, queda, filas, semaforo,
+    return { mk, sueldo: r2(sueldo), extras: r2(extras), pasivos, entra, fijos, subs: r2(subsTotal), dia, sale, queda, filas, semaforo,
       pctLibre: entra > 0 ? Math.max(0, queda / entra) : 0, pctGastado };
   }
 

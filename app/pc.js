@@ -181,6 +181,7 @@
           <table class="tbl"><thead><tr><th>Concepto</th><th class="r">Importe</th></tr></thead><tbody>
             <tr><td>💵 Mi sueldo del mes</td><td class="r">${esc(fmt(m.sueldo))}</td></tr>
             ${tipos.map((t) => `<tr><td>${esc(t)}</td><td class="r">${esc(fmt(ex[t] || 0))}</td></tr>`).join('')}
+            ${m.pasivos > 0 ? `<tr><td>💸 Ingresos pasivos</td><td class="r">${esc(fmt(m.pasivos))}</td></tr>` : ''}
             <tr class="tot"><td>💰 TOTAL GANADO</td><td class="r">${esc(fmt(m.entra))}</td></tr></tbody></table></div>
         <div class="card"><h2>2 · Lo gastado este mes, por categorías</h2>
           <table class="tbl"><thead><tr><th>Categoría</th><th class="r">⚙️ Fijo</th><th class="r">📝 Día a día</th><th class="r">🔄 Devol.</th><th class="r">Gasto neto</th><th class="r">%</th></tr></thead><tbody>
@@ -389,13 +390,13 @@
     const subTot = C.subsForMonth(cfg, mk, cats.map((c) => c.nombre)).total;
     return head('⚙️ Piloto Automático · lo que se repite', `<span class="mut small">Los cambios valen a partir de:</span>${sel}`) + `
       <div class="small mut" style="margin:0 4px 12px">Escribe el importe en el mes en el que cambia: <b>se queda así todos los meses siguientes</b> (igual que en el Excel). Para cambiarlo más adelante, elige ese mes arriba y escribe el nuevo importe. El <b>presupuesto</b> es lo máximo que quieres gastar al mes en esa categoría: la app te avisa al llegar al 80 %.</div>
-      ${(cfg.cuentas || []).length ? `<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:12px 16px"><b>💵 Mi sueldo entra en</b><select id="pSueldoCta" class="t" style="max-width:260px">${accOpts((cfg.sueldoCuenta || {}).id, '— no sumarlo a ninguna cuenta —')}</select><span>el día</span><input id="pSueldoDia" type="number" min="1" max="31" class="t" value="${(cfg.sueldoCuenta || {}).dia || 1}" style="max-width:80px;text-align:right"><span class="small mut">Se suma solo ese día (desde que lo activas). Las suscripciones con cuenta se descuentan igual el día de su cobro.</span></div>` : '<div class="small mut" style="margin:0 4px 12px">💡 Crea tus cuentas en <b>💰 Mi dinero</b> para que el sueldo y las suscripciones se sumen y descuenten solos.</div>'}
-      <div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="min-width:280px">Concepto</th><th class="r" style="width:170px">Importe/mes desde ${esc(C.MESES[M - 1].slice(0, 3))} ${Y}</th><th style="width:150px">Vigente desde</th><th class="r" style="width:150px">🚦 Presupuesto/mes</th><th style="width:50px"></th></tr></thead><tbody>
-        <tr><td><b>💵 Mi sueldo (lo que cobro cada mes)</b></td><td>${inp('__sueldo', cfg.sueldo)}</td><td class="mut">${esc(desdeDe(cfg.sueldo))}</td><td></td><td></td></tr>
+      ${(cfg.cuentas || []).length ? '<div class="small mut" style="margin:0 4px 12px">💳 En la columna <b>Cuenta</b> eliges dónde <b>entra el sueldo</b> y de qué cuenta se <b>descuenta</b> cada gasto fijo, suscripción o pago periódico. También puedes apuntar <b>ingresos pasivos</b> más abajo. Todo se mueve solo el día que toca.</div>' : '<div class="small mut" style="margin:0 4px 12px">💡 Crea tus cuentas en <b>💰 Mi dinero</b> para que el sueldo, los fijos y las suscripciones se sumen y descuenten solos.</div>'}
+      <div class="card" style="padding:0;overflow:auto"><table class="tbl grid"><thead><tr><th style="min-width:280px">Concepto</th><th class="r" style="width:170px">Importe/mes desde ${esc(C.MESES[M - 1].slice(0, 3))} ${Y}</th><th style="width:150px">Vigente desde</th><th style="min-width:250px" title="Sueldo: cuenta donde entra. Resto: cuenta de la que se descuenta el día 1 de cada mes.">💳 Cuenta</th><th class="r" style="width:150px">🚦 Presupuesto/mes</th><th style="width:50px"></th></tr></thead><tbody>
+        <tr><td><b>💵 Mi sueldo (lo que cobro cada mes)</b></td><td>${inp('__sueldo', cfg.sueldo)}</td><td class="mut">${esc(desdeDe(cfg.sueldo))}</td><td>${(cfg.cuentas || []).length ? `<span class="small mut">entra en</span> <select class="cell" id="pSueldoCta" style="max-width:170px">${accOpts((cfg.sueldoCuenta || {}).id, '— ninguna —')}</select> <span class="small mut">día</span> <input id="pSueldoDia" type="number" min="1" max="31" class="cell r" value="${(cfg.sueldoCuenta || {}).dia || 1}" style="width:56px">` : ''}</td><td></td><td></td></tr>
         ${cats.map((c) => { const pres = `<td><input type="number" step="1" min="0" class="cell r" data-pres="${esc(c.nombre)}" value="${c.presupuesto != null ? c.presupuesto : ''}" placeholder="sin límite"></td>`; return /suscripci/i.test(c.nombre)
-    ? `<tr><td>${esc(c.nombre)}</td><td class="r mut">${esc(fmt(subTot))}</td><td class="mut">automático (tabla de abajo)</td>${pres}<td></td></tr>`
-    : `<tr><td>${esc(c.nombre)}</td><td>${inp(c.nombre, (cfg.fijos || {})[c.nombre])}</td><td class="mut">${esc(desdeDe((cfg.fijos || {})[c.nombre]))}</td>${pres}<td class="acc"><button class="ib" data-catdel="${esc(c.nombre)}" title="Quitar categoría">🗑</button></td></tr>`; }).join('')}
-        <tr class="newrow"><td><input type="text" class="cell" id="pCatNew" placeholder="➕ Nueva categoría (con emoji, ej. 🐶 Mascotas)"></td><td></td><td></td><td></td><td class="acc"><button class="ib add" id="pCatAdd" title="Añadir categoría">＋</button></td></tr>
+    ? `<tr><td>${esc(c.nombre)}</td><td class="r mut">${esc(fmt(subTot))}</td><td class="mut">automático (tabla de abajo)</td><td class="small mut">cada una elige su cuenta ↓</td>${pres}<td></td></tr>`
+    : `<tr><td>${esc(c.nombre)}</td><td>${inp(c.nombre, (cfg.fijos || {})[c.nombre])}</td><td class="mut">${esc(desdeDe((cfg.fijos || {})[c.nombre]))}</td><td>${(cfg.cuentas || []).length ? `<select class="cell" data-fcta="${esc(c.nombre)}">${accOpts((cfg.fijosCuenta || {})[c.nombre], '— no descontar —')}</select>` : ''}</td>${pres}<td class="acc"><button class="ib" data-catdel="${esc(c.nombre)}" title="Quitar categoría">🗑</button></td></tr>`; }).join('')}
+        <tr class="newrow"><td><input type="text" class="cell" id="pCatNew" placeholder="➕ Nueva categoría (con emoji, ej. 🐶 Mascotas)"></td><td></td><td></td><td></td><td></td><td class="acc"><button class="ib add" id="pCatAdd" title="Añadir categoría">＋</button></td></tr>
       </tbody></table></div>
       ${cats.some((c) => /mascota/i.test(c.nombre)) ? '' : '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><span>💡 Sugerencia:</span><button class="btn sec" id="pCatMasc" type="button" style="width:auto;min-height:38px">🐾 Añadir categoría Mascota</button></div>'}
       <div class="small mut" style="margin:6px 4px 16px">Las categorías que quites no borran sus gastos: pasarán a “Sin categoría”. Para renombrar una, créala nueva y recategoriza sus gastos.</div>
@@ -404,12 +405,13 @@
         <div class="small mut" style="margin:-4px 0 10px">Mensuales, trimestrales, semestrales, anuales o <b>cada N meses</b>. Si la compartes, pon entre cuántas personas (tú incluido) y se cuenta solo <b>tu parte</b>. “Desde” es el mes de un cobro (el primero o cualquiera) y de ahí se cuentan los siguientes.</div>
         <label class="f">Cómo contarlas en tu mes</label>
         <select id="pModo" class="t pc-sel" style="margin-bottom:10px"><option value="prorrateo" ${modoCobro ? '' : 'selected'}>Repartidas: cada mes una parte (una anual de 120 € = 10 € al mes)</option><option value="cobro" ${modoCobro ? 'selected' : ''}>En el mes del cobro: el importe entero cuando toca (120 € en marzo)</option></select></div>
-        <table class="tbl grid"><thead><tr><th style="min-width:170px">Nombre</th><th class="r" style="width:110px">Importe del cobro €</th><th class="r" style="width:90px" title="1 = mensual · 3 = trimestral · 6 = semestral · 12 = anual · o los meses que sean">Cada (meses)</th><th class="r" style="width:90px">Personas</th><th class="r" style="width:100px">Tu parte €</th><th class="r" style="width:70px">Día</th><th style="width:140px">Desde</th><th style="min-width:190px">Categoría</th><th style="min-width:170px" title="Cuenta de la que se descuenta el día del cobro">💳 Se carga en</th><th style="width:110px">Próximo cobro</th><th style="width:70px">¿Activa?</th><th style="width:50px"></th></tr></thead><tbody>
-        <tr class="newrow"><td><input type="text" class="cell" id="pSubN" placeholder="➕ Netflix, seguro, gym…"></td><td><input type="number" step="0.01" min="0" class="cell r" id="pSubI" placeholder="0,00"></td>
+        <table class="tbl grid"><thead><tr><th style="min-width:170px">Nombre</th><th style="min-width:170px" title="Cuenta de la que se descuenta el día del cobro">💳 Se descuenta de</th><th class="r" style="width:110px">Importe del cobro €</th><th class="r" style="width:90px" title="1 = mensual · 3 = trimestral · 6 = semestral · 12 = anual · o los meses que sean">Cada (meses)</th><th class="r" style="width:90px">Personas</th><th class="r" style="width:100px">Tu parte €</th><th class="r" style="width:70px">Día</th><th style="width:140px">Desde</th><th style="min-width:190px">Categoría</th><th style="width:110px">Próximo cobro</th><th style="width:70px">¿Activa?</th><th style="width:50px"></th></tr></thead><tbody>
+        <tr class="newrow"><td><input type="text" class="cell" id="pSubN" placeholder="➕ Netflix, seguro, gym…"></td><td><select class="cell" id="pSubA">${accOpts('', '— ninguna —')}</select></td><td><input type="number" step="0.01" min="0" class="cell r" id="pSubI" placeholder="0,00"></td>
           <td><input type="number" step="1" min="1" class="cell r" id="pSubC" value="1" list="pCadaDl"></td><td><input type="number" step="1" min="1" class="cell r" id="pSubP" value="1"></td><td></td>
           <td><input type="number" step="1" min="1" max="31" class="cell r" id="pSubD" value="1"></td><td><input type="month" class="cell" id="pSubM" value="${mesActual}"></td>
-          <td><select class="cell" id="pSubK">${catOpts('')}</select></td><td><select class="cell" id="pSubA">${accOpts('', '— ninguna —')}</select></td><td></td><td></td><td class="acc"><button class="ib add" id="pSubAdd" title="Añadir">＋</button></td></tr>
+          <td><select class="cell" id="pSubK">${catOpts('')}</select></td><td></td><td></td><td class="acc"><button class="ib add" id="pSubAdd" title="Añadir">＋</button></td></tr>
         ${subs.map((s, i) => { const nx = nextCharge(s); return `<tr class="${s.activa === false ? 'zero' : ''}"><td><input type="text" class="cell" data-sub="${i}" data-f="nombre" value="${esc(s.nombre)}"></td>
+          <td><select class="cell" data-sub="${i}" data-f="cuenta">${accOpts(s.cuenta || '', '— ninguna —')}</select></td>
           <td><input type="number" step="0.01" min="0" class="cell r" data-sub="${i}" data-f="importe" value="${s.importe}"></td>
           <td><input type="number" step="1" min="1" class="cell r" data-sub="${i}" data-f="cada" value="${C.subEvery(s)}" list="pCadaDl" title="${esc(C.subPeriodo(s))}"></td>
           <td><input type="number" step="1" min="1" class="cell r" data-sub="${i}" data-f="personas" value="${Math.max(1, Math.floor(Number(s.personas) || 1))}"></td>
@@ -417,11 +419,22 @@
           <td><input type="number" step="1" min="1" max="31" class="cell r" data-sub="${i}" data-f="dia" value="${s.dia || 1}"></td>
           <td><input type="month" class="cell" data-sub="${i}" data-f="desde" value="${esc(s.desde || '')}"></td>
           <td><select class="cell" data-sub="${i}" data-f="categoria">${catOpts(s.categoria || '')}</select></td>
-          <td><select class="cell" data-sub="${i}" data-f="cuenta">${accOpts(s.cuenta || '', '— ninguna —')}</select></td>
           <td class="mut">${nx ? esc(ddmm(nx.fecha)) + ' · ' + esc(fmt(nx.importe)) : '—'}</td>
           <td style="text-align:center"><input type="checkbox" data-sub="${i}" data-f="activa" ${s.activa !== false ? 'checked' : ''}></td><td class="acc"><button class="ib" data-subdel="${i}" title="Eliminar">🗑</button></td></tr>`; }).join('')}
-        <tr class="tot"><td colspan="4">Cuentan en ${esc(C.monthLabel(mk))} (${modoCobro ? 'en el mes del cobro' : 'repartidas'})</td><td class="r">${esc(fmt(subTot))}</td><td colspan="7"></td></tr>
+        <tr class="tot"><td colspan="5">Cuentan en ${esc(C.monthLabel(mk))} (${modoCobro ? 'en el mes del cobro' : 'repartidas'})</td><td class="r">${esc(fmt(subTot))}</td><td colspan="6"></td></tr>
         </tbody></table><datalist id="pCadaDl"><option value="1">mensual</option><option value="3">trimestral</option><option value="6">semestral</option><option value="12">anual</option></datalist></div>
+
+      <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>💸 Ingresos pasivos (se suman cada mes)</h2>
+        <div class="small mut" style="margin:-4px 0 10px">Dinero que entra solo todos los meses: un alquiler que cobras, intereses, dividendos… Cuentan como ganado y, si eliges cuenta, se ingresan el día que pongas.</div>
+        <table class="tbl grid"><thead><tr><th style="min-width:200px">Nombre</th><th class="r" style="width:130px">Importe/mes €</th><th class="r" style="width:80px">Día</th><th style="width:140px">Desde</th><th style="min-width:190px">💳 Entra en</th><th style="width:70px">¿Activo?</th><th style="width:50px"></th></tr></thead><tbody>
+        <tr class="newrow"><td><input type="text" class="cell" id="pIngN" placeholder="➕ Alquiler, intereses…"></td><td><input type="number" step="0.01" min="0" class="cell r" id="pIngI" placeholder="0,00"></td><td><input type="number" step="1" min="1" max="31" class="cell r" id="pIngD" value="1"></td><td><input type="month" class="cell" id="pIngM" value="${mesActual}"></td><td><select class="cell" id="pIngA">${accOpts('', '— ninguna —')}</select></td><td></td><td class="acc"><button class="ib add" id="pIngAdd" title="Añadir">＋</button></td></tr>
+        ${(cfg.ingresos || []).map((g, i) => `<tr class="${g.activa === false ? 'zero' : ''}"><td><input type="text" class="cell" data-ing="${i}" data-f="nombre" value="${esc(g.nombre)}"></td>
+          <td><input type="number" step="0.01" min="0" class="cell r" data-ing="${i}" data-f="importe" value="${g.importe}"></td>
+          <td><input type="number" step="1" min="1" max="31" class="cell r" data-ing="${i}" data-f="dia" value="${g.dia || 1}"></td>
+          <td><input type="month" class="cell" data-ing="${i}" data-f="desde" value="${esc(g.desde || '')}"></td>
+          <td><select class="cell" data-ing="${i}" data-f="cuenta">${accOpts(g.cuenta || '', '— ninguna —')}</select></td>
+          <td style="text-align:center"><input type="checkbox" data-ing="${i}" data-f="activa" ${g.activa !== false ? 'checked' : ''}></td><td class="acc"><button class="ib" data-ingdel="${i}" title="Eliminar">🗑</button></td></tr>`).join('')}
+        </tbody></table></div></div>
 
       <div class="pc-grid2" style="grid-template-columns:1fr 1fr">
         <div class="card"><h2>🚀 Mis tipos de dinero extra</h2><div class="chips" style="margin-bottom:10px">${(cfg.tiposExtra || []).map((t, i) => `<span class="chip" style="font-size:14px;padding:7px 12px">${esc(t)} <button data-tdel="${i}" aria-label="Quitar" style="color:var(--bad);margin-left:6px">✕</button></span>`).join('') || '<span class="mut small">Aún no hay tipos.</span>'}</div>
@@ -572,6 +585,17 @@
     else { const f = Object.assign({}, cfg.fijos || {}); f[el.dataset.pil] = serieUpsert(f[el.dataset.pil], mk, n); FF.setConfig('fijos', f); }
     FF.toast(`✓ Desde ${esc(C.monthLabel(mk))}: ${esc(fmt(n))}`); pending = true;
   }
+  function ingEdit(el) {
+    const l = (data().config.ingresos || []).map((x) => Object.assign({}, x)), g0 = l[+el.dataset.ing], f = el.dataset.f;
+    if (!g0) return;
+    if (f === 'importe') { const n = C.parseAmount(el.value); if (n == null || n < 0) { FF.toast('Importe no válido'); render(); return; } g0.importe = n; }
+    else if (f === 'dia') { const n = Math.round(C.parseAmount(el.value) || 0); if (n < 1 || n > 31) { FF.toast('El día va de 1 a 31'); render(); return; } g0.dia = n; }
+    else if (f === 'activa') g0.activa = el.checked;
+    else if (f === 'desde') g0.desde = /^\d{4}-\d{2}$/.test(el.value) ? el.value : '';
+    else if (f === 'cuenta') { g0.cuenta = el.value; if (el.value) ensureAuto(); }
+    else g0.nombre = el.value.trim() || g0.nombre;
+    FF.setConfig('ingresos', l); FF.toast('✓ Guardado'); now();
+  }
   function subEdit(el) {
     const l = (data().config.suscripciones || []).map((x) => Object.assign({}, x)), s0 = l[+el.dataset.sub], f = el.dataset.f;
     if (!s0 || !SUBF.includes(f)) return;
@@ -633,6 +657,18 @@
     }
     const cd = e.target.closest('[data-catdel]');
     if (cd) { if (confirm(`¿Quitar “${cd.dataset.catdel}”? Sus gastos no se borran: pasarán a “Sin categoría”.`)) { FF.setConfig('categorias', catObjs().filter((c) => c.nombre !== cd.dataset.catdel)); now(); } return; }
+    if (e.target.closest('#pIngAdd')) {
+      const n = $('#pIngN').value.trim(), i = C.parseAmount($('#pIngI').value), dia = Math.round(C.parseAmount($('#pIngD').value) || 0);
+      if (!n) return shake($('#pIngN'));
+      if (i == null || i <= 0) return shake($('#pIngI'));
+      if (dia < 1 || dia > 31) return shake($('#pIngD'));
+      const desde = /^\d{4}-\d{2}$/.test($('#pIngM').value) ? $('#pIngM').value : C.monthKey(hoy());
+      FF.setConfig('ingresos', (data().config.ingresos || []).concat([{ id: C.uuid(), nombre: n, importe: i, dia, desde, cuenta: $('#pIngA').value, activa: true }]));
+      if ($('#pIngA').value) ensureAuto();
+      FF.toast('✓ Ingreso pasivo añadido'); return now();
+    }
+    const idl = e.target.closest('[data-ingdel]');
+    if (idl) { FF.setConfig('ingresos', (data().config.ingresos || []).filter((_, k) => k !== +idl.dataset.ingdel)); return now(); }
     if (e.target.closest('#pSubAdd')) {
       const n = $('#pSubN').value.trim(), i = C.parseAmount($('#pSubI').value);
       const cada = Math.round(C.parseAmount($('#pSubC').value) || 0), pers = Math.round(C.parseAmount($('#pSubP').value) || 0), dia = Math.round(C.parseAmount($('#pSubD').value) || 0);
@@ -700,6 +736,12 @@
     }
     if (t.id === 'pTarifa') { const n = C.parseAmount(t.value); if (n != null && n >= 0) { FF.setConfig('tarifaHora', n); FF.toast('✓ Tarifa guardada'); } return; }
     if (t.dataset.pil != null) return pilotoEdit(t);
+    if (t.dataset.fcta != null) {
+      const m = { ...(data().config.fijosCuenta || {}) };
+      if (t.value) { m[t.dataset.fcta] = t.value; ensureAuto(); } else delete m[t.dataset.fcta];
+      FF.setConfig('fijosCuenta', m); FF.toast('✓ Guardado'); return now();
+    }
+    if (t.dataset.ing != null) return ingEdit(t);
     if (t.dataset.sub != null) return subEdit(t);
     if (t.dataset.d && t.dataset.f) return deudaEdit(t);
     if (t.id === 'gMes') { st.gMes = t.value; st.gLimit = 150; pending = false; return render(); }
