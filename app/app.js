@@ -563,10 +563,14 @@
   function addExtraRow(row) { data.extras.push(row); persistData(); enqueue('addExtra', { rows: [row] }); }
   function delExtra(id) { data.extras = data.extras.filter((x) => x.id !== id); persistData(); enqueue('delete', { sheet: 'extras', id }); }
 
-  function applyHashConfig() {
-    const m = location.hash.match(/^#c=([A-Za-z0-9+/=]+)$/);
-    if (!m) return;
-    history.replaceState(null, '', location.pathname + location.search);       // quita el token de la barra de direcciones
+  /** Conecta con el enlace de configuración: el de la barra de direcciones o, si se pasa texto, el que se pega en Ajustes
+      (en el iPhone la app instalada guarda sus datos aparte de Safari, así que el enlace hay que pegarlo dentro de ella). */
+  function applyHashConfig(text) {
+    const pegado = typeof text === 'string';
+    const src = pegado ? (text.match(/#c=[A-Za-z0-9+/=]+/) || [''])[0] : location.hash;
+    const m = src.match(/^#c=([A-Za-z0-9+/=]+)$/);
+    if (!m) { if (pegado) toast('Ese texto no es un enlace de configuración'); return; }
+    if (!pegado) history.replaceState(null, '', location.pathname + location.search);       // quita el token de la barra de direcciones
     let o;
     try { o = JSON.parse(b64dec(m[1])); } catch (e) { toast('Enlace de configuración inválido'); return; }
     if (!o || typeof o.u !== 'string' || typeof o.t !== 'string' || o.t.length < 16 || !hostOk(o.u)) { toast('⚠️ Enlace no válido o de un servidor desconocido'); return; }
@@ -846,6 +850,7 @@
     ['sUrl', 'sTok', 'sKey', 'sMod', 'sBase'].forEach((id) => $('#' + id).addEventListener('change', saveCfg));
     $('#sTest').onclick = testConn;
     $('#sLink').onclick = shareLink;
+    $('#sLinkUse').onclick = () => { const v = $('#sLinkIn').value.trim(); if (!v) { toast('Pega primero el enlace'); return; } applyHashConfig(v); $('#sLinkIn').value = ''; };
     $('#sSync').onclick = async () => { if (!saveCfg()) return; toast((await refresh(true)) ? '🔄 Sincronizado' : '⚠️ No se pudo sincronizar'); };
     $('#xExp').onclick = exportXlsx;
     $('#xImp').onclick = () => $('#xIn').click();
