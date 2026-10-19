@@ -397,7 +397,7 @@
     : `<tr><td>${esc(c.nombre)}</td><td>${inp(c.nombre, (cfg.fijos || {})[c.nombre])}</td><td class="mut">${esc(desdeDe((cfg.fijos || {})[c.nombre]))}</td>${pres}<td class="acc"><button class="ib" data-catdel="${esc(c.nombre)}" title="Quitar categoría">🗑</button></td></tr>`; }).join('')}
         <tr class="newrow"><td><input type="text" class="cell" id="pCatNew" placeholder="➕ Nueva categoría (con emoji, ej. 🐶 Mascotas)"></td><td></td><td></td><td></td><td class="acc"><button class="ib add" id="pCatAdd" title="Añadir categoría">＋</button></td></tr>
       </tbody></table></div>
-      ${cats().some((c) => /mascota/i.test(c)) ? '' : '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><span>💡 Sugerencia:</span><button class="btn sec" id="pCatMasc" type="button" style="width:auto;min-height:38px">🐾 Añadir categoría Mascota</button></div>'}
+      ${cats.some((c) => /mascota/i.test(c.nombre)) ? '' : '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><span>💡 Sugerencia:</span><button class="btn sec" id="pCatMasc" type="button" style="width:auto;min-height:38px">🐾 Añadir categoría Mascota</button></div>'}
       <div class="small mut" style="margin:6px 4px 16px">Las categorías que quites no borran sus gastos: pasarán a “Sin categoría”. Para renombrar una, créala nueva y recategoriza sus gastos.</div>
 
       <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>🎮 Mis suscripciones y pagos periódicos</h2>
