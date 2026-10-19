@@ -366,16 +366,28 @@
   }
 
   /* ================================================================== HISTORIAL y detalle */
+  /** Filtro del historial por mes y año ("" = todos). */
+  const enPeriodo = (g) => (!ui.hY || g.fecha.slice(0, 4) === ui.hY) && (!ui.hM || g.fecha.slice(5, 7) === ui.hM);
+  function histFiltros(lista) {
+    const ys = [...new Set(data.gastos.map((g) => g.fecha.slice(0, 4)).concat([C.todayISO().slice(0, 4)]))].sort().reverse();
+    if (ui.hY && !ys.includes(ui.hY)) ui.hY = '';
+    $('#hY').innerHTML = `<option value="">Todos los años</option>${ys.map((y) => `<option ${y === ui.hY ? 'selected' : ''}>${y}</option>`).join('')}`;
+    $('#hM').innerHTML = `<option value="">Todos los meses</option>${C.MESES.map((m, i) => { const v = String(i + 1).padStart(2, '0'); return `<option value="${v}" ${v === ui.hM ? 'selected' : ''}>${m}</option>`; }).join('')}`;
+    const neto = C.r2(lista.reduce((a, g) => a + (g.tipo === C.TIPO_DEV ? -1 : 1) * g.importe, 0));
+    $('#histTot').textContent = ui.hY || ui.hM || $('#q').value.trim() ? `${lista.length} movimiento${lista.length === 1 ? '' : 's'} · total ${C.fmtEUR(neto)}` : '';
+  }
   function renderHist() {
     const q = $('#q').value.trim(), box = $('#hist');
     if (q) {
-      const res = C.searchGastos(data.gastos, q);
+      const res = C.searchGastos(data.gastos, q).filter(({ g }) => enPeriodo(g));
+      histFiltros(res.map(({ g }) => g));
       box.innerHTML = res.length ? res.slice(0, 80).map(({ g, items }) => itemRow(g).replace('</div></div><div class="amt', `</div>${items.length ? `<div class="s">${items.slice(0, 3).map((l) => `<mark>${esc(l.n)}</mark> ${esc(C.fmtEUR(l.p))}`).join(' · ')}</div>` : ''}</div><div class="amt`)).join('')
         : `<div class="empty">Nada con “${esc(q)}”.</div>`;
       return;
     }
-    const all = data.gastos.slice().sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
-    if (!all.length) { box.innerHTML = '<div class="empty">Todavía no hay gastos.</div>'; return; }
+    const all = data.gastos.filter(enPeriodo).sort((a, b) => (a.fecha < b.fecha ? 1 : -1));
+    histFiltros(all);
+    if (!all.length) { box.innerHTML = `<div class="empty">${data.gastos.length ? 'No hay gastos en ese periodo.' : 'Todavía no hay gastos.'}</div>`; return; }
     let html = '', last = '';
     all.slice(0, ui.histLimit).forEach((g) => { if (g.fecha !== last) { last = g.fecha; html += `<div class="day">${esc(dayLabel(g.fecha))}</div>`; } html += itemRow(g); });
     if (all.length > ui.histLimit) html += '<button class="btn sec" id="more" style="margin-top:12px">Ver más</button>';
@@ -805,6 +817,7 @@
 
     document.addEventListener('click', (e) => { const it = e.target.closest('.item[data-id]'); if (it && !e.target.closest('button')) openDetail(it.dataset.id); });
     let qt; $('#q').addEventListener('input', () => { clearTimeout(qt); qt = setTimeout(renderHist, 120); });
+    ['hM', 'hY'].forEach((id) => $('#' + id).addEventListener('change', (e) => { ui[id] = e.target.value; ui.histLimit = 60; renderHist(); }));
     document.addEventListener('click', (e) => { if (e.target.id === 'more') { ui.histLimit += 60; renderHist(); } });
 
     ['sUrl', 'sTok', 'sKey', 'sMod', 'sBase'].forEach((id) => $('#' + id).addEventListener('change', saveCfg));
