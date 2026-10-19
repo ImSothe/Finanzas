@@ -54,3 +54,10 @@ test('normConfig limpia cuentas, histórico y plan (valores raros acotados, nomb
   assert.equal(c.plan.rentab, 30); assert.equal(c.plan.anios, 60); assert.equal(c.plan.inflacion, 0); assert.equal(c.plan.aporte, undefined);
   assert.equal(C.normConfig({ plan: 'texto' }).plan, undefined);
 });
+
+test('cuenta de pago: un gasto resta, una devolución o un extra suman', () => {
+  assert.equal(C.payDelta(C.TIPO_GASTO, 12.5), -12.5);
+  assert.equal(C.payDelta(C.TIPO_DEV, 12.5), 12.5);
+  assert.equal(C.payDelta('extra', 100), 100);
+  assert.equal(C.payDelta(C.TIPO_GASTO, 'x'), 0);
+});

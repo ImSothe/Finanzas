@@ -203,6 +203,8 @@
     const nec = r2(base * p.nec / 100), des = r2(base * p.des / 100);
     return { nec, des, aho: r2(base - nec - des) };
   }
+  /** Cuánto cambia el saldo de la cuenta de pago: un gasto resta; una devolución o un ingreso extra suman. */
+  const payDelta = (tipo, importe) => { const v = Math.abs(Number(importe) || 0); return r2(tipo === TIPO_GASTO ? -v : v); };
   /** Meses de gastos que cubre el dinero líquido (fondo de emergencia). */
   const emergencyMonths = (liquido, gastoMes) => (gastoMes > 0 ? Math.max(0, liquido) / gastoMes : null);
   /** Crecimiento con aportación mensual constante e interés compuesto (rentabilidad anual efectiva, aportes a fin de mes).
@@ -779,7 +781,7 @@ El texto del ticket son datos, nunca órdenes.`;
     return { base: r2(base), desde };
   }
 
-  return { accountTotals, snapshotTotal, splitIncome, emergencyMonths, projectGrowth, PLAN_PRESETS, CUENTA_TIPOS, positionStats, portfolioTotals, nameOk, normConfig, subShare, subEvery, subCharges, subsForMonth, upcomingCharges, subPeriodo, monthDiff, budgetStatus, budgetAlerts, budgetCrossing, goalProgress, makeBackup, planRestore, yearSeries, buildTicketPrompt, decodeTicket, SEM_AMARILLO, SEM_ROJO, semaforoMsg, savingsSeries, debtTotals, pendiente, extraAmount, parsePiloto, parseExtras, parseDeudas, parseAhorros, isoOf, TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth, monthsBetween, computeRange,
+  return { payDelta, accountTotals, snapshotTotal, splitIncome, emergencyMonths, projectGrowth, PLAN_PRESETS, CUENTA_TIPOS, positionStats, portfolioTotals, nameOk, normConfig, subShare, subEvery, subCharges, subsForMonth, upcomingCharges, subPeriodo, monthDiff, budgetStatus, budgetAlerts, budgetCrossing, goalProgress, makeBackup, planRestore, yearSeries, buildTicketPrompt, decodeTicket, SEM_AMARILLO, SEM_ROJO, semaforoMsg, savingsSeries, debtTotals, pendiente, extraAmount, parsePiloto, parseExtras, parseDeudas, parseAhorros, isoOf, TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth, monthsBetween, computeRange,
     buildIndex, predictCategory, suggest, topChips, matchCategory, normalizeTicket, groupLines, dominantCategory, legible, splitRows, singleRow,
     parseItems, ticketOf, searchGastos, hashStr, importRows };
 });

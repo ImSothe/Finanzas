@@ -346,14 +346,16 @@
       if (!ui.cat) { $('#catBtn').classList.add('need'); const c = await pickFrom('Tipo de ingreso extra', data.config.tiposExtra || [], null); if (!c) return; setCat(c, false); }
       const row = { id: C.uuid(), fecha, tipo: ui.cat, importe: imp, detalle: concept };
       data.extras.push(row); persistData(); enqueue('addExtra', { rows: [row] });
-      toast(`💵 Extra guardado · Te quedan <b>${esc(C.fmtEUR(C.computeMonth(data, ui.mk).queda))}</b>`, { label: 'Deshacer', fn: () => { data.extras = data.extras.filter((x) => x.id !== row.id); persistData(); enqueue('delete', { sheet: 'extras', id: row.id }); renderAll(); } });
+      const pe = FF.payApply ? FF.payApply('extra', imp) : '';
+      toast(`💵 Extra guardado · Te quedan <b>${esc(C.fmtEUR(C.computeMonth(data, ui.mk).queda))}</b>${pe ? ' · ' + esc(pe) : ''}`, { label: 'Deshacer', fn: () => { if (FF.payApply) FF.payApply('extra', imp, true); data.extras = data.extras.filter((x) => x.id !== row.id); persistData(); enqueue('delete', { sheet: 'extras', id: row.id }); renderAll(); } });
     } else {
       if (!ui.cat) { $('#catBtn').classList.add('need'); const c = await pickCategory(null); if (!c) return; setCat(c, false); }
       const row = { id: C.uuid(), fecha, categoria: ui.cat, importe: imp, tipo: ui.tipo, detalle: concept, comercio: '', items: '', ticketId: '', origen: 'app' };
       addGastos([row]);
+      const pg = FF.payApply ? FF.payApply(ui.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, imp) : '';
       if (concept) learn(concept, ui.cat);
       const q = C.computeMonth(data, C.monthKey(fecha)).queda;
-      toast(`✓ Guardado · Te quedan <b>${esc(C.fmtEUR(q))}</b>`, { label: 'Deshacer', fn: () => { delGasto(row.id); renderAll(); } });
+      toast(`✓ Guardado · Te quedan <b>${esc(C.fmtEUR(q))}</b>${pg ? ' · ' + esc(pg) : ''}`, { label: 'Deshacer', fn: () => { delGasto(row.id); if (pg && FF.payApply) FF.payApply(ui.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, imp, true); renderAll(); } });
     }
     $('#amt').value = ''; $('#con').value = ''; $('#amt').placeholder = '0,00'; $('#sug').innerHTML = '';
     ui.fecha = null; renderDate(); setCat(null, false);
@@ -759,6 +761,7 @@
 
   function renderAll() {
     renderHeader(); setNet();
+    if (FF.payFill) FF.payFill();
     $('#onboard').hidden = configured();
     $('#noCats').hidden = !!cats().length;
     if (ui.view === 'home') { renderChips(); renderRecent(); }

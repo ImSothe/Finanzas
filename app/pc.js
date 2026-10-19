@@ -149,6 +149,7 @@
         <div class="pc-grow"><label class="f">${extra ? 'Tipo de ingreso' : 'Categoría'} ${q.auto ? '<span class="badge">auto ✨</span>' : ''}</label>
           <select id="qCat" class="t"><option value="">— elige —</option>${lista.map((c) => `<option ${c === q.cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
         <div><label class="f">Tipo</label><select id="qTipo" class="t"><option value="Gasto" ${q.tipo === 'Gasto' ? 'selected' : ''}>Gasto</option><option value="${C.TIPO_DEV}" ${q.tipo === C.TIPO_DEV ? 'selected' : ''}>↩ Devolución</option><option value="extra" ${extra ? 'selected' : ''}>＋ Ingreso extra</option></select></div>
+        ${FF.payHas && FF.payHas() ? `<div><label class="f">Pagado con</label><select id="qPay" class="t">${FF.payOptions()}</select></div>` : ''}
         <div><label class="f">Fecha</label><input id="qFec" type="date" class="t" value="${esc(q.fec || hoy())}"></div>
         <div class="pc-btns"><button class="btn pri" id="qSave" type="button">💾 Guardar</button><button class="btn cam" id="qCam" type="button" title="Escanear un ticket con IA">📷</button></div>
       </div>
@@ -481,12 +482,14 @@
     if (!q.cat) { shake($('#qCat')); FF.toast(extra ? 'Elige el tipo de ingreso' : 'Elige una categoría'); return; }
     if (extra) {
       FF.addExtraRow({ id: C.uuid(), fecha, tipo: q.cat, importe: imp, detalle: concept });
-      FF.toast(`💵 Extra guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>`);
+      const pe = FF.payApply ? FF.payApply('extra', imp) : '';
+      FF.toast(`💵 Extra guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>${pe ? ' · ' + esc(pe) : ''}`);
     } else {
       const row = { id: C.uuid(), fecha, categoria: q.cat, importe: imp, tipo: q.tipo, detalle: concept, comercio: '', items: '', ticketId: '', origen: 'app' };
       FF.addGastos([row]);
+      const pt = q.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, pg = FF.payApply ? FF.payApply(pt, imp) : '';
       if (concept) FF.learn(concept, q.cat);
-      FF.toast(`✓ Guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>`, { label: 'Deshacer', fn: () => { FF.delGasto(row.id); FF.renderAll(); } });
+      FF.toast(`✓ Guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>${pg ? ' · ' + esc(pg) : ''}`, { label: 'Deshacer', fn: () => { FF.delGasto(row.id); if (pg && FF.payApply) FF.payApply(pt, imp, true); FF.renderAll(); } });
     }
     Object.assign(st.q, { imp: '', con: '', fec: '', cat: '', auto: false, tipo: extra ? 'Gasto' : q.tipo });
     if (C.monthKey(fecha) !== FF.ui.mk) FF.ui.mk = C.monthKey(fecha);
