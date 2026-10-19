@@ -512,7 +512,7 @@
     if (url && !hostOk(url)) { toast('⚠️ La URL debe ser de Google Apps Script (https://script.google.com/macros/s/…/exec)'); $('#sUrl').value = cfg.url; ok = false; } else cfg.url = url;
     if (!gemBaseOk(base)) { toast('⚠️ La dirección de Gemini solo puede ser ' + esc(GEM_BASE)); $('#sBase').value = cfg.gBase; ok = false; } else cfg.gBase = base;
     if (!/^[A-Za-z0-9._\-]{1,60}$/.test(model)) { toast('⚠️ Nombre de modelo no válido'); $('#sMod').value = cfg.gModel; ok = false; } else cfg.gModel = model;
-    cfg.token = $('#sTok').value.trim(); cfg.gKey = $('#sKey').value.trim();
+    cfg.token = $('#sTok').value.replace(/\s+/g, ''); cfg.gKey = $('#sKey').value.trim();
     save(LS.cfg, cfg); setNet(); renderAll();
     return ok;
   }
@@ -525,7 +525,7 @@
       const p = await (await fetch(cfg.url + (cfg.url.includes('?') ? '&' : '?') + 'action=ping', { redirect: 'follow' })).json();
       if (!p.ok) { msg.textContent = '❌ La URL responde, pero no parece la app de Finanzas.'; return; }
       const d = await apiRead('rev');
-      msg.textContent = d.ok ? '✅ Conectado correctamente.' : (d.code === 'auth' ? '🔑 La URL es correcta pero el token no.' : '❌ ' + (d.error || 'error'));
+      msg.textContent = d.ok ? '✅ Conectado correctamente.' : (d.code === 'auth' ? '🔑 La URL es correcta pero el token no. No lo teclees: cópialo en la hoja (menú 💰 Finanzas App → Mostrar el token) y pégalo, o usa el enlace de configuración.' : '❌ ' + (d.error || 'error'));
       if (d.ok) refresh(true);
     } catch (e) { msg.textContent = '❌ No se pudo conectar. ¿Está la implementación como "Cualquier usuario"? ¿Tienes conexión?'; }
   }
@@ -567,13 +567,34 @@
       (en el iPhone la app instalada guarda sus datos aparte de Safari, así que el enlace hay que pegarlo dentro de ella). */
   function applyHashConfig(text) {
     const pegado = typeof text === 'string';
-    const src = pegado ? (text.match(/#c=[A-Za-z0-9+/=]+/) || [''])[0] : location.hash;
+    let src = location.hash;
+    if (pegado) {
+      /* Tolerante con lo que haga el móvil al copiar: saltos de línea o espacios en medio, símbolos codificados (%3D, %2B…),
+         texto antes o después, o solo la parte final del enlace. Se van uniendo trozos hasta que el contenido es válido. */
+      let raw = text;
+      try { raw = decodeURIComponent(raw); } catch (e) { /* se queda como está */ }
+      const i = raw.indexOf('#c='), resto = i >= 0 ? raw.slice(i + 3) : raw.trim();
+      const valido = (b) => { try { const o = JSON.parse(b64dec(b)); return !!(o && typeof o.u === 'string' && typeof o.t === 'string'); } catch (e) { return false; } };
+      let acc = '', hallado = '';
+      for (const t of resto.split(/\s+/)) {
+        const limpio = t.replace(/[^A-Za-z0-9+/=_-]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+        if (!limpio) continue;
+        acc += limpio;
+        if (valido(acc)) { hallado = acc; break; }
+      }
+      if (!hallado) {                                                        // texto pegado al final sin separar (el campo de una línea se come los saltos de línea): se prueba quitando letras del final
+        const junto = resto.replace(/[^A-Za-z0-9+/=_-]/g, '').replace(/-/g, '+').replace(/_/g, '/');
+        for (let e = junto.length; e >= 40 && !hallado; e--) if (valido(junto.slice(0, e))) hallado = junto.slice(0, e);
+        if (!hallado && i >= 0) hallado = junto;
+      }
+      src = hallado ? '#c=' + hallado : '';
+    }
     const m = src.match(/^#c=([A-Za-z0-9+/=]+)$/);
-    if (!m) { if (pegado) toast('Ese texto no es un enlace de configuración'); return; }
+    if (!m) { if (pegado) toast('No encuentro el enlace de configuración en lo que has pegado. Copia el enlace entero (empieza por https://imsothe.github.io/Finanzas/#c=)'); return; }
     if (!pegado) history.replaceState(null, '', location.pathname + location.search);       // quita el token de la barra de direcciones
     let o;
-    try { o = JSON.parse(b64dec(m[1])); } catch (e) { toast('Enlace de configuración inválido'); return; }
-    if (!o || typeof o.u !== 'string' || typeof o.t !== 'string' || o.t.length < 16 || !hostOk(o.u)) { toast('⚠️ Enlace no válido o de un servidor desconocido'); return; }
+    try { o = JSON.parse(b64dec(m[1])); } catch (e) { toast('El enlace está incompleto o roto (se cortó al copiarlo). Vuelve a copiarlo entero desde el PC.'); return; }
+    if (!o || typeof o.u !== 'string' || typeof o.t !== 'string' || o.t.length < 16 || !hostOk(o.u)) { toast('⚠️ El enlace no lleva una dirección de Google Apps Script válida'); return; }
     const sh = openSheet(`<h3>¿Conectar esta app?</h3><p>Se conectará a la hoja del servidor <b>${esc(new URL(o.u).host)}</b>. Acepta solo si el enlace lo has generado tú.</p>
       <div class="grid2"><button class="btn sec" id="hcNo">Cancelar</button><button class="btn pri" id="hcOk">Conectar</button></div>`);
     $('#hcNo', sh.el).onclick = () => sh.close();
