@@ -346,7 +346,7 @@
   /** Devolución: se elige la compra devuelta (así no cuenta como si gastaras de más). */
   function clearDev() { ui.devDe = null; ui.devLabel = null; const t = $('#devTxt'); if (t) { t.textContent = 'Elige la compra devuelta'; t.classList.add('mut'); } }
   async function pickDev() {
-    const list = C.devCandidates(data.gastos, 60);
+    const list = C.devCandidates(data.gastos, 60, FF.isPriv());
     const c = await pickFrom('Compra devuelta', list.map((x) => x.label), ui.devLabel);
     if (!c) return;
     const it = list.find((x) => x.label === c); if (!it) return;
@@ -873,7 +873,7 @@
       data: { get: () => data, enumerable: true }, cfg: { get: () => cfg, enumerable: true },
       index: { get: () => index, enumerable: true }, queue: { get: () => queue, enumerable: true },
     });
-    Object.assign(FF, { ui, enqueue, addGastos, addMov, addExtraRow, delExtra, delGasto,
+    Object.assign(FF, { isPriv: () => document.documentElement.classList.contains('priv'), ui, enqueue, addGastos, addMov, addExtraRow, delExtra, delGasto,
       learn, persist: persistData, openSheet, pickCategory, scan: scanFile, toast, esc, cats, openDetail, goMobile, renderAll, refresh, flush, rebuildIndex, loadDefaultCats,
       shareLink, exportXlsx, importXlsx, renderSettings, configured, setConfig, diagnose, defaultCats: DEFAULT_CATS.slice(), loadXLSX: () => loadXLSX() });
     if (/^(localhost|127\.0\.0\.1)$/.test(location.hostname)) window.__ff = { get data() { return data; }, get queue() { return queue; }, get cfg() { return cfg; }, ui, refresh, flush, go, renderAll, scan: scanFile, save: saveCfg };

@@ -59,7 +59,7 @@
     return `<div class="card"><h2>💵 Nómina de ${esc(C.monthLabel(mk))}</h2>
       <div class="small mut" style="margin-bottom:8px">${hecha ? '✅ Ya la has ingresado este mes. Puedes ingresar otra cantidad si cobras algo más.' : 'Cuando cobres, dime en qué cuenta entra y se suma a su saldo.'}</div>
       <div class="pc-qrow"><div><label class="f">Importe (€)</label><input id="nmImp" type="number" step="0.01" min="0" class="t" value="${sueldo || ''}" style="max-width:150px;text-align:right"></div>
-        <div class="pc-grow"><label class="f">Ingresa en</label><select id="nmCta" class="t">${l.map((c) => `<option value="${esc(c.id)}" ${c.id === pref ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}</select></div>
+        <div class="pc-grow"><label class="f">Ingresa en</label><select id="nmCta" class="t">${l.map((c) => `<option value="${esc(c.id)}" ${c.id === pref ? 'selected' : ''}>${esc(c.nombre)}${FF.isPriv && FF.isPriv() ? '' : ' · ' + esc(fmt(c.saldo))}</option>`).join('')}</select></div>
         <div class="pc-btns"><button class="btn pri" id="nmAdd" type="button">💵 Ingresar</button></div></div></div>`;
   }
 
@@ -209,7 +209,7 @@
   const payDefault = () => { const l = payList(); if (l.length === 1) return l[0].id; const b = l.find((c) => c.tipo !== 'efectivo'); return b ? b.id : ''; };
   const payId = () => (payChoice !== null && (payChoice === '' || payList().some((c) => c.id === payChoice)) ? payChoice : payDefault());
   FF.payHas = () => payList().length > 0;
-  FF.payOptions = (vacio) => `<option value="">${esc(vacio || '— No descontar de ninguna cuenta —')}</option>${payList().map((c) => `<option value="${esc(c.id)}" ${c.id === payId() ? 'selected' : ''}>${esc(c.nombre)} · ${esc(fmt(c.saldo))}</option>`).join('')}`;
+  FF.payOptions = (vacio) => `<option value="">${esc(vacio || '— No descontar de ninguna cuenta —')}</option>${payList().map((c) => `<option value="${esc(c.id)}" ${c.id === payId() ? 'selected' : ''}>${esc(c.nombre)}${FF.isPriv && FF.isPriv() ? '' : ' · ' + esc(fmt(c.saldo))}</option>`).join('')}`;
   /** Rellena el selector del móvil y lo oculta si no hay cuentas. */
   FF.payFill = () => { const w = $('#payWrap'), s = $('#payAcc'); if (!w || !s) return; w.hidden = !FF.payHas(); s.innerHTML = FF.payOptions(); };
   /** Aplica (o deshace) el efecto de un apunte en la cuenta elegida. Devuelve el texto para el aviso. */

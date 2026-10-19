@@ -210,10 +210,10 @@
   /** Lo que aún se puede devolver de una compra (importe menos lo ya devuelto). */
   const refundable = (g, gastos) => r2(Math.max(0, (Number(g.importe) || 0) - gastos.filter((d) => devDe(d) === g.id).reduce((a, d) => a + (Number(d.importe) || 0), 0)));
   /** Compras recientes que todavía se pueden devolver, para elegir de cuál es la devolución. */
-  function devCandidates(gastos, n = 80) {
+  function devCandidates(gastos, n = 80, sinImporte = false) {
     return (gastos || []).filter((g) => g.tipo !== TIPO_DEV && g.fecha).sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
       .map((g) => ({ g, rest: refundable(g, gastos) })).filter((x) => x.rest > 0).slice(0, n)
-      .map(({ g, rest }) => ({ id: g.id, categoria: g.categoria, rest, label: `${g.fecha.slice(8, 10)}/${g.fecha.slice(5, 7)} · ${String(g.detalle || g.categoria).slice(0, 40)} · ${fmtEUR(rest)}` }));
+      .map(({ g, rest }) => ({ id: g.id, categoria: g.categoria, rest, label: `${g.fecha.slice(8, 10)}/${g.fecha.slice(5, 7)} · ${String(g.detalle || g.categoria).slice(0, 40)}${sinImporte ? '' : ' · ' + fmtEUR(rest)}` }));
   }
   /** Movimientos automáticos pendientes: el sueldo entra en su cuenta el día elegido y cada suscripción se carga en la suya el día de cobro.
       Solo cuenta desde "autoDesde" hasta hoy y no repite lo ya aplicado (claves en "aplicados"; una nómina ingresada a mano también cuenta). */

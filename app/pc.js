@@ -41,6 +41,7 @@
   const advBtn = document.createElement('button');
   advBtn.id = 'pcToAdv'; advBtn.type = 'button'; advBtn.hidden = true; advBtn.textContent = '🖥️ Modo avanzado';
   advBtn.addEventListener('click', () => setPref('auto'));
+  const toAdvM = $('#toAdvM'); if (toAdvM) toAdvM.addEventListener('click', () => { setPref('pc'); FF.toast('🖥️ Modo avanzado. Para volver: «Vista simplificada» al final del menú.'); });
   const pcMain = document.createElement('section');
   pcMain.id = 'pcMain'; pcMain.hidden = true;
   document.body.append(nav, pcMain, advBtn);
@@ -149,7 +150,7 @@
         <div class="pc-grow"><label class="f">${extra ? 'Tipo de ingreso' : 'Categoría'} ${q.auto ? '<span class="badge">auto ✨</span>' : ''}</label>
           <select id="qCat" class="t"><option value="">— elige —</option>${lista.map((c) => `<option ${c === q.cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
         <div><label class="f">Tipo</label><select id="qTipo" class="t"><option value="Gasto" ${q.tipo === 'Gasto' ? 'selected' : ''}>Gasto</option><option value="${C.TIPO_DEV}" ${q.tipo === C.TIPO_DEV ? 'selected' : ''}>↩ Devolución</option><option value="extra" ${extra ? 'selected' : ''}>＋ Ingreso extra</option></select></div>
-        ${q.tipo === C.TIPO_DEV ? `<div class="pc-grow"><label class="f">↩ Compra devuelta</label><select id="qDev" class="t"><option value="">— elige la compra —</option>${C.devCandidates(data().gastos, 80).map((x) => `<option value="${esc(x.id)}" ${x.id === q.dev ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></div>` : ''}
+        ${q.tipo === C.TIPO_DEV ? `<div class="pc-grow"><label class="f">↩ Compra devuelta</label><select id="qDev" class="t"><option value="">— elige la compra —</option>${C.devCandidates(data().gastos, 80, FF.isPriv && FF.isPriv()).map((x) => `<option value="${esc(x.id)}" ${x.id === q.dev ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></div>` : ''}
         ${FF.payHas && FF.payHas() ? `<div><label class="f" title="Se descuenta de esa cuenta; si es una devolución o un extra, se ingresa en ella">Cuenta</label><select id="qPay" class="t">${FF.payOptions()}</select></div>` : ''}
         <div><label class="f">Fecha</label><input id="qFec" type="date" class="t" value="${esc(q.fec || hoy())}"></div>
         <div class="pc-btns"><button class="btn pri" id="qSave" type="button">💾 Guardar</button><button class="btn cam" id="qCam" type="button" title="Escanear un ticket con IA">📷</button></div>
@@ -228,7 +229,7 @@
     const opts = ['todos'].concat(mesesConDatos());
     return head(dev ? '🔄 Devoluciones' : '📝 Gastos', `<select id="gMes" class="t pc-sel">${opts.map((o) => `<option value="${o}" ${o === mes ? 'selected' : ''}>${o === 'todos' ? 'Todos los meses' : C.monthLabel(o)}</option>`).join('')}</select>
       <input id="gQ" class="t pc-sel" type="search" placeholder="🔎 Buscar (también dentro de tickets)" value="${esc(st.gQ)}" style="min-width:260px">`) + `
-      <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="nDev" style="margin:0">↩ Compra devuelta (solo si el tipo de la fila es Devolución)</label><select id="nDev" class="t" style="max-width:460px"><option value="">— elige la compra —</option>${C.devCandidates(data().gastos, 80).map((x) => `<option value="${esc(x.id)}">${esc(x.label)}</option>`).join('')}</select></div>
+      <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="nDev" style="margin:0">↩ Compra devuelta (solo si el tipo de la fila es Devolución)</label><select id="nDev" class="t" style="max-width:460px"><option value="">— elige la compra —</option>${C.devCandidates(data().gastos, 80, FF.isPriv && FF.isPriv()).map((x) => `<option value="${esc(x.id)}">${esc(x.label)}</option>`).join('')}</select></div>
       ${FF.payHas && FF.payHas() ? `<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="nPay" style="margin:0">💳 Cuenta (se descuenta; si es devolución, se ingresa)</label><select id="nPay" class="t" style="max-width:340px">${FF.payOptions()}</select></div>` : ''}
       <div class="card" style="padding:0;overflow:auto">
         <table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th style="min-width:260px">Categoría</th><th class="r" style="width:120px">Importe €</th><th style="width:140px">Tipo</th><th>Detalle</th><th style="width:90px"></th></tr></thead>
@@ -747,7 +748,7 @@
     if (t.id === 'qTipo') { st.q.tipo = t.value; st.q.cat = ''; st.q.auto = false; pending = false; return render(); }
     if (t.id === 'qCat') { st.q.cat = t.value; st.q.auto = false; return; }
     if (t.id === 'qDev') {
-      st.q.dev = t.value; const it = C.devCandidates(data().gastos, 80).find((x) => x.id === t.value);
+      st.q.dev = t.value; const it = C.devCandidates(data().gastos, 80, FF.isPriv && FF.isPriv()).find((x) => x.id === t.value);
       if (it) { st.q.cat = it.categoria; st.q.auto = false; if (!st.q.imp) st.q.imp = String(it.rest).replace('.', ','); }
       return render();
     }

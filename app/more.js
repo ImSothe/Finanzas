@@ -281,7 +281,7 @@
   document.addEventListener('click', (e) => {
     if (!e.target.closest('[data-eye]')) return;
     const on = document.documentElement.classList.toggle('priv');
-    lsSet('ff.priv', on ? '1' : '0'); paintEye();
+    lsSet('ff.priv', on ? '1' : '0'); paintEye(); setTimeout(() => { if (FF.renderAll) FF.renderAll(); }, 0);
   });
   paintEye();
   FF.paintEye = paintEye;

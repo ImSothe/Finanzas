@@ -266,7 +266,7 @@ html.locked body>*:not(#lockScr){visibility:hidden!important}
 body.pm .gpaso{flex-wrap:wrap}
 .pc-eye{color:var(--mut);font-size:13px;padding:6px 10px;border-radius:10px;border:1px solid var(--line);background:#ffffff08}
 .pc-eye:hover{color:var(--txt);border-color:var(--acc)}
-html.priv .big,html.priv .pc-card .v,html.priv .pc-card .s,html.priv .tbl td.r,html.priv .tbl td.nb,html.priv .tbl input.cell.r,html.priv .kv b,html.priv .amt,html.priv .tk-line b,html.priv #toast b,html.priv .gleg b,html.priv .gdonut text,html.priv .pc-batmsg{filter:blur(7px);user-select:none;transition:filter .15s}
+html.priv .big,html.priv .pc-card .v,html.priv .pc-card .s,html.priv .tbl td.r,html.priv .tbl td.nb,html.priv .tbl input.cell.r,html.priv .kv b,html.priv .amt,html.priv .tk-line b,html.priv #toast b,html.priv .gleg b,html.priv .gdonut text,html.priv .pc-batmsg,html.priv #batMsg,html.priv #histTot,html.priv .gbars text,html.priv #pcMain input.cell.r,html.priv #nmImp,html.priv #cuSaldo{filter:blur(9px);user-select:none;transition:filter .15s}
 html.priv #eyeBtn{background:linear-gradient(135deg,#22d3ee,#3b82f6)}
 /* ---- bienvenida y tour ---- */
 #wiz{position:fixed;inset:0;z-index:150;display:flex;align-items:center;justify-content:center;padding:18px;overflow:auto;background:radial-gradient(900px 520px at 50% -10%,#22d3ee26,transparent 62%),radial-gradient(700px 500px at 100% 100%,#8b5cf622,transparent 60%),#070b17}
@@ -330,6 +330,7 @@ html.priv #eyeBtn{background:linear-gradient(135deg,#22d3ee,#3b82f6)}
     <button class="nav-btn" id="mPrev" aria-label="Mes anterior">‹</button>
     <div class="grow" id="mLabel">…</div>
     <button class="nav-btn" id="mNext" aria-label="Mes siguiente">›</button>
+    <button class="nav-btn" id="toAdvM" aria-label="Pasar al modo avanzado" title="Modo avanzado (tablas, Mi dinero, Planning…)">🖥️</button>
     <button class="nav-btn" id="eyeBtn" data-eye aria-label="Ocultar o mostrar los importes" title="Ocultar o mostrar los importes">👁️</button>
     <span class="chip" id="sync" role="status">…</span>
   </div>
