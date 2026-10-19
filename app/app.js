@@ -339,6 +339,16 @@
     $('#recent').innerHTML = last.length ? last.map(itemRow).join('') : '<div class="empty">Aún no hay gastos. Escribe el primero arriba 👆</div>';
   }
 
+  /** Devolución: se elige la compra devuelta (así no cuenta como si gastaras de más). */
+  function clearDev() { ui.devDe = null; ui.devLabel = null; const t = $('#devTxt'); if (t) { t.textContent = 'Elige la compra devuelta'; t.classList.add('mut'); } }
+  async function pickDev() {
+    const list = C.devCandidates(data.gastos, 60);
+    const c = await pickFrom('Compra devuelta', list.map((x) => x.label), ui.devLabel);
+    if (!c) return;
+    const it = list.find((x) => x.label === c); if (!it) return;
+    ui.devDe = it.id; ui.devLabel = c; $('#devTxt').textContent = c; $('#devTxt').classList.remove('mut');
+    setCat(it.categoria, false); $('#amt').placeholder = C.fmtEUR(it.rest).replace(/[^\d,]/g, '');
+  }
   async function saveQuick() {
     const imp = C.parseAmount($('#amt').value);
     if (imp == null || imp <= 0) { const a = $('#amt'); a.classList.remove('shake'); void a.offsetWidth; a.classList.add('shake'); a.focus(); toast('Pon un importe mayor que 0'); return; }
@@ -351,15 +361,22 @@
       const pe = FF.payApply ? FF.payApply('extra', imp) : '', pidE = FF.payLastId;
       toast(`💵 Extra guardado · Te quedan <b>${esc(C.fmtEUR(C.computeMonth(data, ui.mk).queda))}</b>${pe ? ' · ' + esc(pe) : ''}`, { label: 'Deshacer', fn: () => { if (pe && FF.payApply) FF.payApply('extra', imp, pidE); data.extras = data.extras.filter((x) => x.id !== row.id); persistData(); enqueue('delete', { sheet: 'extras', id: row.id }); renderAll(); } });
     } else {
+      let tId = '';
+      if (ui.tipo === C.TIPO_DEV) {
+        const o = data.gastos.find((g) => g.id === ui.devDe);
+        if (!o) { toast('Elige la compra que devuelves'); return pickDev(); }
+        if (imp > C.refundable(o, data.gastos) + 0.005) { toast(`Solo se pueden devolver ${esc(C.fmtEUR(C.refundable(o, data.gastos)))} de esa compra`); return; }
+        tId = 'dev:' + o.id; setCat(o.categoria, false);
+      }
       if (!ui.cat) { $('#catBtn').classList.add('need'); const c = await pickCategory(null); if (!c) return; setCat(c, false); }
-      const row = { id: C.uuid(), fecha, categoria: ui.cat, importe: imp, tipo: ui.tipo, detalle: concept, comercio: '', items: '', ticketId: '', origen: 'app' };
+      const row = { id: C.uuid(), fecha, categoria: ui.cat, importe: imp, tipo: ui.tipo, detalle: concept, comercio: '', items: '', ticketId: tId, origen: 'app' };
       addGastos([row]);
       const pg = FF.payApply ? FF.payApply(ui.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, imp) : '', pidG = FF.payLastId;
       if (concept) learn(concept, ui.cat);
       const q = C.computeMonth(data, C.monthKey(fecha)).queda;
       toast(`✓ Guardado · Te quedan <b>${esc(C.fmtEUR(q))}</b>${pg ? ' · ' + esc(pg) : ''}`, { label: 'Deshacer', fn: () => { delGasto(row.id); if (pg && FF.payApply) FF.payApply(ui.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, imp, pidG); renderAll(); } });
     }
-    $('#amt').value = ''; $('#con').value = ''; $('#amt').placeholder = '0,00'; $('#sug').innerHTML = '';
+    $('#amt').value = ''; $('#con').value = ''; $('#amt').placeholder = '0,00'; $('#sug').innerHTML = ''; clearDev();
     ui.fecha = null; renderDate(); setCat(null, false);
     if (C.monthKey(fecha) !== ui.mk) ui.mk = C.monthKey(fecha);
     renderAll(); $('#amt').focus();
@@ -808,10 +825,11 @@
     $('#sug').onclick = (e) => { const b = e.target.closest('button[data-i]'); if (b) chooseSuggestion(ui.suggestions[+b.dataset.i]); };
     $('#chips').onclick = (e) => { const b = e.target.closest('button[data-i]'); if (!b) return; const c = ui.chips[+b.dataset.i]; ui.tipo = 'Gasto'; syncSeg(); $('#con').value = c.text; setCat(c.cat, true); $('#sug').innerHTML = ''; $('#amt').placeholder = String(c.importe).replace('.', ','); $('#amt').focus(); };
     $('#catBtn').onclick = async () => { const list = ui.tipo === 'extra' ? (data.config.tiposExtra || []) : cats(); const c = await pickFrom(ui.tipo === 'extra' ? 'Tipo de ingreso extra' : 'Categoría', list, ui.cat); if (c) setCat(c, false); };
-    $('#tipoSeg').onclick = (e) => { const b = e.target.closest('button[data-t]'); if (!b) return; ui.tipo = b.dataset.t; setCat(null, false); syncSeg(); $('#catLbl').textContent = ui.tipo === 'extra' ? 'Tipo de ingreso' : 'Categoría'; $('#sug').innerHTML = ''; if (ui.tipo !== 'extra') onConceptInput(); };
+    $('#tipoSeg').onclick = (e) => { const b = e.target.closest('button[data-t]'); if (!b) return; ui.tipo = b.dataset.t; setCat(null, false); clearDev(); $('#devWrap').hidden = ui.tipo !== C.TIPO_DEV; syncSeg(); $('#catLbl').textContent = ui.tipo === 'extra' ? 'Tipo de ingreso' : 'Categoría'; $('#sug').innerHTML = ''; if (ui.tipo !== 'extra') onConceptInput(); };
     $('#dateBtn').onclick = () => { const d = $('#dateIn'); d.value = ui.fecha || C.todayISO(); if (d.showPicker) { try { d.showPicker(); return; } catch (er) { /* sigue */ } } d.focus(); d.click(); };
     $('#dateIn').onchange = (e) => { ui.fecha = e.target.value && e.target.value !== C.todayISO() ? e.target.value : null; renderDate(); };
     $('#saveBtn').onclick = saveQuick;
+    $('#devBtn').onclick = pickDev;
     $('#camBtn').onclick = () => $('#camIn').click();
     $('#camIn').onchange = (e) => { const f = e.target.files[0]; e.target.value = ''; scanFile(f); };
 

@@ -149,7 +149,8 @@
         <div class="pc-grow"><label class="f">${extra ? 'Tipo de ingreso' : 'Categoría'} ${q.auto ? '<span class="badge">auto ✨</span>' : ''}</label>
           <select id="qCat" class="t"><option value="">— elige —</option>${lista.map((c) => `<option ${c === q.cat ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></div>
         <div><label class="f">Tipo</label><select id="qTipo" class="t"><option value="Gasto" ${q.tipo === 'Gasto' ? 'selected' : ''}>Gasto</option><option value="${C.TIPO_DEV}" ${q.tipo === C.TIPO_DEV ? 'selected' : ''}>↩ Devolución</option><option value="extra" ${extra ? 'selected' : ''}>＋ Ingreso extra</option></select></div>
-        ${FF.payHas && FF.payHas() ? `<div><label class="f">Pagado con</label><select id="qPay" class="t">${FF.payOptions()}</select></div>` : ''}
+        ${q.tipo === C.TIPO_DEV ? `<div class="pc-grow"><label class="f">↩ Compra devuelta</label><select id="qDev" class="t"><option value="">— elige la compra —</option>${C.devCandidates(data().gastos, 80).map((x) => `<option value="${esc(x.id)}" ${x.id === q.dev ? 'selected' : ''}>${esc(x.label)}</option>`).join('')}</select></div>` : ''}
+        ${FF.payHas && FF.payHas() ? `<div><label class="f" title="Se descuenta de esa cuenta; si es una devolución o un extra, se ingresa en ella">Cuenta</label><select id="qPay" class="t">${FF.payOptions()}</select></div>` : ''}
         <div><label class="f">Fecha</label><input id="qFec" type="date" class="t" value="${esc(q.fec || hoy())}"></div>
         <div class="pc-btns"><button class="btn pri" id="qSave" type="button">💾 Guardar</button><button class="btn cam" id="qCam" type="button" title="Escanear un ticket con IA">📷</button></div>
       </div>
@@ -226,7 +227,8 @@
     const opts = ['todos'].concat(mesesConDatos());
     return head(dev ? '🔄 Devoluciones' : '📝 Gastos', `<select id="gMes" class="t pc-sel">${opts.map((o) => `<option value="${o}" ${o === mes ? 'selected' : ''}>${o === 'todos' ? 'Todos los meses' : C.monthLabel(o)}</option>`).join('')}</select>
       <input id="gQ" class="t pc-sel" type="search" placeholder="🔎 Buscar (también dentro de tickets)" value="${esc(st.gQ)}" style="min-width:260px">`) + `
-      ${FF.payHas && FF.payHas() ? `<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="nPay" style="margin:0">💳 Pagado con (para el gasto nuevo de la fila de abajo)</label><select id="nPay" class="t" style="max-width:340px">${FF.payOptions()}</select></div>` : ''}
+      <div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="nDev" style="margin:0">↩ Compra devuelta (solo si el tipo de la fila es Devolución)</label><select id="nDev" class="t" style="max-width:460px"><option value="">— elige la compra —</option>${C.devCandidates(data().gastos, 80).map((x) => `<option value="${esc(x.id)}">${esc(x.label)}</option>`).join('')}</select></div>
+      ${FF.payHas && FF.payHas() ? `<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><label class="f" for="nPay" style="margin:0">💳 Cuenta (se descuenta; si es devolución, se ingresa)</label><select id="nPay" class="t" style="max-width:340px">${FF.payOptions()}</select></div>` : ''}
       <div class="card" style="padding:0;overflow:auto">
         <table class="tbl grid"><thead><tr><th style="width:140px">Fecha</th><th style="min-width:260px">Categoría</th><th class="r" style="width:120px">Importe €</th><th style="width:140px">Tipo</th><th>Detalle</th><th style="width:90px"></th></tr></thead>
         <tbody>
@@ -395,6 +397,7 @@
     : `<tr><td>${esc(c.nombre)}</td><td>${inp(c.nombre, (cfg.fijos || {})[c.nombre])}</td><td class="mut">${esc(desdeDe((cfg.fijos || {})[c.nombre]))}</td>${pres}<td class="acc"><button class="ib" data-catdel="${esc(c.nombre)}" title="Quitar categoría">🗑</button></td></tr>`; }).join('')}
         <tr class="newrow"><td><input type="text" class="cell" id="pCatNew" placeholder="➕ Nueva categoría (con emoji, ej. 🐶 Mascotas)"></td><td></td><td></td><td></td><td class="acc"><button class="ib add" id="pCatAdd" title="Añadir categoría">＋</button></td></tr>
       </tbody></table></div>
+      ${cats().some((c) => /mascota/i.test(c)) ? '' : '<div class="card" style="display:flex;gap:12px;align-items:center;flex-wrap:wrap;padding:10px 16px"><span>💡 Sugerencia:</span><button class="btn sec" id="pCatMasc" type="button" style="width:auto;min-height:38px">🐾 Añadir categoría Mascota</button></div>'}
       <div class="small mut" style="margin:6px 4px 16px">Las categorías que quites no borran sus gastos: pasarán a “Sin categoría”. Para renombrar una, créala nueva y recategoriza sus gastos.</div>
 
       <div class="card" style="padding:0;overflow:auto"><div style="padding:14px 14px 0"><h2>🎮 Mis suscripciones y pagos periódicos</h2>
@@ -485,19 +488,26 @@
   function quickSave() {
     const q = st.q, imp = C.parseAmount(q.imp), fecha = q.fec || hoy(), extra = q.tipo === 'extra', concept = (q.con || '').trim();
     if (imp == null || imp <= 0) { shake($('#qImp')); FF.toast('Pon un importe mayor que 0'); return; }
+    let tId = '';
+    if (!extra && q.tipo === C.TIPO_DEV) {
+      const o = data().gastos.find((g) => g.id === q.dev);
+      if (!o) { shake($('#qDev')); FF.toast('Elige la compra que devuelves'); return; }
+      if (imp > C.refundable(o, data().gastos) + 0.005) { shake($('#qImp')); FF.toast(`Solo se pueden devolver ${esc(fmt(C.refundable(o, data().gastos)))} de esa compra`); return; }
+      tId = 'dev:' + o.id; q.cat = o.categoria;
+    }
     if (!q.cat) { shake($('#qCat')); FF.toast(extra ? 'Elige el tipo de ingreso' : 'Elige una categoría'); return; }
     if (extra) {
       FF.addExtraRow({ id: C.uuid(), fecha, tipo: q.cat, importe: imp, detalle: concept });
       const pe = FF.payApply ? FF.payApply('extra', imp) : '';
       FF.toast(`💵 Extra guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>${pe ? ' · ' + esc(pe) : ''}`);
     } else {
-      const row = { id: C.uuid(), fecha, categoria: q.cat, importe: imp, tipo: q.tipo, detalle: concept, comercio: '', items: '', ticketId: '', origen: 'app' };
+      const row = { id: C.uuid(), fecha, categoria: q.cat, importe: imp, tipo: q.tipo, detalle: concept, comercio: '', items: '', ticketId: tId, origen: 'app' };
       FF.addGastos([row]);
       const pt = q.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, pg = FF.payApply ? FF.payApply(pt, imp) : '', pid = FF.payLastId;
       if (concept) FF.learn(concept, q.cat);
       FF.toast(`✓ Guardado · Te quedan <b>${esc(fmt(C.computeMonth(data(), C.monthKey(fecha)).queda))}</b>${pg ? ' · ' + esc(pg) : ''}`, { label: 'Deshacer', fn: () => { FF.delGasto(row.id); if (pg && FF.payApply) FF.payApply(pt, imp, pid); FF.renderAll(); } });
     }
-    Object.assign(st.q, { imp: '', con: '', fec: '', cat: '', auto: false, tipo: extra ? 'Gasto' : q.tipo });
+    Object.assign(st.q, { imp: '', con: '', fec: '', cat: '', auto: false, dev: '', tipo: extra ? 'Gasto' : q.tipo });
     if (C.monthKey(fecha) !== FF.ui.mk) FF.ui.mk = C.monthKey(fecha);
     now();
     setTimeout(() => { const i = $('#qImp'); if (i) i.focus(); }, 30);
@@ -506,8 +516,15 @@
   function nuevaFila() {
     const imp = C.parseAmount($('#nImp').value), cat = $('#nCat').value, fecha = $('#nFec').value || hoy();
     if (imp == null || imp <= 0) { shake($('#nImp')); return; }
-    if (!cat) { shake($('#nCat')); FF.toast('Elige una categoría'); return; }
-    const row = { id: C.uuid(), fecha, categoria: cat, importe: imp, tipo: $('#nTipo').value, detalle: $('#nDet').value.trim(), comercio: '', items: '', ticketId: '', origen: 'app' };
+    let tId = '', cat2 = cat;
+    if ($('#nTipo').value === C.TIPO_DEV) {
+      const o = data().gastos.find((g) => g.id === ($('#nDev') || {}).value);
+      if (!o) { shake($('#nDev')); FF.toast('Elige la compra que devuelves'); return; }
+      if (imp > C.refundable(o, data().gastos) + 0.005) { shake($('#nImp')); FF.toast(`Solo se pueden devolver ${esc(fmt(C.refundable(o, data().gastos)))} de esa compra`); return; }
+      tId = 'dev:' + o.id; cat2 = o.categoria;
+    }
+    if (!cat2) { shake($('#nCat')); FF.toast('Elige una categoría'); return; }
+    const row = { id: C.uuid(), fecha, categoria: cat2, importe: imp, tipo: $('#nTipo').value, detalle: $('#nDet').value.trim(), comercio: '', items: '', ticketId: tId, origen: 'app' };
     FF.addGastos([row]); if (row.detalle) FF.learn(row.detalle, cat);
     const pg = FF.payApply ? FF.payApply(row.tipo === C.TIPO_DEV ? C.TIPO_DEV : C.TIPO_GASTO, imp) : '';
     FF.toast('✓ ' + (row.tipo === C.TIPO_DEV ? 'Devolución añadida' : 'Gasto añadido') + (pg ? ' · ' + esc(pg) : '')); now();
@@ -607,6 +624,7 @@
       FF.setConfig('ahorros', { base: b == null ? 0 : b, desde: `${$('#aAnio').value}-${String($('#aMes').value).padStart(2, '0')}` });
       FF.toast('✓ Ahorros guardados'); pending = false; return render();
     }
+    if (e.target.closest('#pCatMasc')) { FF.setConfig('categorias', catObjs().concat([{ nombre: '🐾 Mascota (comida, veterinario, accesorios)', presupuesto: null }])); FF.toast('✓ Categoría Mascota añadida'); return now(); }
     if (e.target.closest('#pCatAdd')) {
       const n = C.nameOk($('#pCatNew').value);
       if (!n) { FF.toast('Pon un nombre válido para la categoría'); return shake($('#pCatNew')); }
@@ -688,6 +706,11 @@
     if (t.id === 'qFec') { st.q.fec = t.value; return; }
     if (t.id === 'qTipo') { st.q.tipo = t.value; st.q.cat = ''; st.q.auto = false; pending = false; return render(); }
     if (t.id === 'qCat') { st.q.cat = t.value; st.q.auto = false; return; }
+    if (t.id === 'qDev') {
+      st.q.dev = t.value; const it = C.devCandidates(data().gastos, 80).find((x) => x.id === t.value);
+      if (it) { st.q.cat = it.categoria; st.q.auto = false; if (!st.q.imp) st.q.imp = String(it.rest).replace('.', ','); }
+      return render();
+    }
     if (t.id === 'ncFile') { const f = t.files[0]; t.value = ''; if (f) FF.importXlsx(f); return; }
     if (t.id === 'pcCam') { const f = t.files[0]; t.value = ''; if (f) FF.scan(f); return; }
     if (t.dataset && t.dataset.id && t.dataset.f) editarCampo(t);

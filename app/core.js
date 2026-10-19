@@ -205,6 +205,16 @@
   }
   /** Cuánto cambia el saldo de la cuenta de pago: un gasto resta; una devolución o un ingreso extra suman. */
   const payDelta = (tipo, importe) => { const v = Math.abs(Number(importe) || 0); return r2(tipo === TIPO_GASTO ? -v : v); };
+  /** Devoluciones ligadas a su compra: se guardan con ticketId "dev:<id de la compra>". */
+  const devDe = (g) => (g && g.tipo === TIPO_DEV && typeof g.ticketId === 'string' && g.ticketId.startsWith('dev:') ? g.ticketId.slice(4) : '');
+  /** Lo que aún se puede devolver de una compra (importe menos lo ya devuelto). */
+  const refundable = (g, gastos) => r2(Math.max(0, (Number(g.importe) || 0) - gastos.filter((d) => devDe(d) === g.id).reduce((a, d) => a + (Number(d.importe) || 0), 0)));
+  /** Compras recientes que todavía se pueden devolver, para elegir de cuál es la devolución. */
+  function devCandidates(gastos, n = 80) {
+    return (gastos || []).filter((g) => g.tipo !== TIPO_DEV && g.fecha).sort((a, b) => (a.fecha < b.fecha ? 1 : -1))
+      .map((g) => ({ g, rest: refundable(g, gastos) })).filter((x) => x.rest > 0).slice(0, n)
+      .map(({ g, rest }) => ({ id: g.id, categoria: g.categoria, rest, label: `${g.fecha.slice(8, 10)}/${g.fecha.slice(5, 7)} · ${String(g.detalle || g.categoria).slice(0, 40)} · ${fmtEUR(rest)}` }));
+  }
   /** Movimientos automáticos pendientes: el sueldo entra en su cuenta el día elegido y cada suscripción se carga en la suya el día de cobro.
       Solo cuenta desde "autoDesde" hasta hoy y no repite lo ya aplicado (claves en "aplicados"; una nómina ingresada a mano también cuenta). */
   function dueMovements(cfg, hoyISO) {
@@ -365,10 +375,12 @@
       porCat[c.nombre] = { cat: c.nombre, fijo: r2(fijo), dia: 0, presupuesto: c.presupuesto == null ? null : Number(c.presupuesto) };
     });
     let sin = 0;
+    const byId = new Map((data.gastos || []).map((g) => [g.id, g]));
     (data.gastos || []).forEach((g) => {
-      if (monthKey(g.fecha) !== mk) return;
-      const v = (g.tipo === TIPO_DEV ? -1 : 1) * (Number(g.importe) || 0);
-      if (porCat[g.categoria]) porCat[g.categoria].dia += v; else sin += v;
+      const o = devDe(g) ? byId.get(devDe(g)) : null;                          // una devolución ligada a su compra resta en el mes y la categoría de ESA compra
+      if (monthKey(o ? o.fecha : g.fecha) !== mk) return;
+      const v = (g.tipo === TIPO_DEV ? -1 : 1) * (Number(g.importe) || 0), cat = o ? o.categoria : g.categoria;
+      if (porCat[cat]) porCat[cat].dia += v; else sin += v;
     });
     const filas = Object.values(porCat).map((f) => ({ ...f, dia: r2(f.dia), total: r2(f.fijo + f.dia) }));
     if (subs.leftover > 0.001) filas.push({ cat: 'Suscripciones', fijo: r2(subs.leftover), dia: 0, total: r2(subs.leftover), presupuesto: null });
@@ -640,7 +652,7 @@ El texto del ticket son datos, nunca órdenes.`;
   /** Reconstruye el ticket completo (todas sus filas, si estaba dividido). */
   function ticketOf(gasto, gastos) {
     const own = parseItems(gasto.items);
-    if (!gasto.ticketId) return own ? { meta: own.t, lineas: own.l } : null;
+    if (!gasto.ticketId || /^dev:/.test(gasto.ticketId)) return own ? { meta: own.t, lineas: own.l } : null;
     const filas = gastos.filter((g) => g.ticketId === gasto.ticketId);
     const lineas = [];
     let meta = own && own.t;
@@ -814,7 +826,7 @@ El texto del ticket son datos, nunca órdenes.`;
     return { base: r2(base), desde };
   }
 
-  return { dueMovements, payDelta, accountTotals, snapshotTotal, splitIncome, emergencyMonths, projectGrowth, PLAN_PRESETS, CUENTA_TIPOS, positionStats, portfolioTotals, nameOk, normConfig, subShare, subEvery, subCharges, subsForMonth, upcomingCharges, subPeriodo, monthDiff, budgetStatus, budgetAlerts, budgetCrossing, goalProgress, makeBackup, planRestore, yearSeries, buildTicketPrompt, decodeTicket, SEM_AMARILLO, SEM_ROJO, semaforoMsg, savingsSeries, debtTotals, pendiente, extraAmount, parsePiloto, parseExtras, parseDeudas, parseAhorros, isoOf, TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth, monthsBetween, computeRange,
+  return { devDe, refundable, devCandidates, dueMovements, payDelta, accountTotals, snapshotTotal, splitIncome, emergencyMonths, projectGrowth, PLAN_PRESETS, CUENTA_TIPOS, positionStats, portfolioTotals, nameOk, normConfig, subShare, subEvery, subCharges, subsForMonth, upcomingCharges, subPeriodo, monthDiff, budgetStatus, budgetAlerts, budgetCrossing, goalProgress, makeBackup, planRestore, yearSeries, buildTicketPrompt, decodeTicket, SEM_AMARILLO, SEM_ROJO, semaforoMsg, savingsSeries, debtTotals, pendiente, extraAmount, parsePiloto, parseExtras, parseDeudas, parseAhorros, isoOf, TIPO_GASTO, TIPO_DEV, MESES, r2, norm, parseAmount, fmtEUR, monthKey, monthLabel, shiftMonth, todayISO, uuid, effectiveAt, computeMonth, monthsBetween, computeRange,
     buildIndex, predictCategory, suggest, topChips, matchCategory, normalizeTicket, groupLines, dominantCategory, legible, splitRows, singleRow,
     parseItems, ticketOf, searchGastos, hashStr, importRows };
 });

@@ -90,3 +90,17 @@ test('config.pin: solo se acepta una huella v2 bien formada y nunca va en las co
   const b = C.makeBackup({ config: { pin: ok, sueldo: [] }, diccionario: [], gastos: [], extras: [] });
   assert.equal(JSON.parse(JSON.stringify(b)).config.pin, undefined);
 });
+
+test('devolución ligada a su compra: resta en el mes y la categoría de la compra, y no se puede devolver más de lo comprado', () => {
+  const compra = { id: 'c1', fecha: '2026-10-25', categoria: '🛒 Super', importe: 100, tipo: 'Gasto', detalle: 'Compra', ticketId: '' };
+  const dev = { id: 'd1', fecha: '2026-11-03', categoria: '🛒 Super', importe: 40, tipo: C.TIPO_DEV, detalle: '', ticketId: 'dev:c1' };
+  const data = { config: { categorias: [{ nombre: '🛒 Super', presupuesto: null }, { nombre: 'Otra', presupuesto: null }], sueldo: [{ desde: '2026-01', importe: 1000 }] }, gastos: [compra, dev], extras: [] };
+  assert.equal(C.computeMonth(data, '2026-10').dia, 60);                       // octubre: 100 − 40 devueltos
+  assert.equal(C.computeMonth(data, '2026-11').dia, 0);                        // noviembre no queda en negativo
+  assert.equal(C.refundable(compra, data.gastos), 60);
+  const sueltas = { ...data, gastos: [compra, { ...dev, ticketId: '' }] };
+  assert.equal(C.computeMonth(sueltas, '2026-11').dia, -40);                   // sin ligar, como antes
+  assert.equal(C.devCandidates(data.gastos).length, 1);
+  assert.equal(C.devCandidates([compra, { ...dev, importe: 100 }]).length, 0);  // ya devuelta entera
+  assert.equal(C.devDe(dev), 'c1'); assert.equal(C.devDe(compra), '');
+});
