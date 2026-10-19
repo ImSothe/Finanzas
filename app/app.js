@@ -113,6 +113,7 @@
       if (!d.ok) { ui.net = 'offline'; return false; }
       data = { rev: d.rev, config: C.normConfig(Object.assign({ categorias: [], sueldo: [], fijos: {}, suscripciones: [], tiposExtra: [] }, d.config)), diccionario: d.diccionario || [], gastos: d.gastos || [], extras: d.extras || [] };
       overlayQueue(); rebuildIndex(); persistData(); ui.net = 'idle';
+      if (FF.autoPost) setTimeout(FF.autoPost, 0);
       return true;
     } catch (e) { ui.net = 'offline'; return false; } finally { refreshing = false; setNet(); renderAll(); }
   }

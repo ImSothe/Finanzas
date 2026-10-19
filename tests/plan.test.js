@@ -61,3 +61,22 @@ test('cuenta de pago: un gasto resta, una devolución o un extra suman', () => {
   assert.equal(C.payDelta('extra', 100), 100);
   assert.equal(C.payDelta(C.TIPO_GASTO, 'x'), 0);
 });
+
+test('movimientos automáticos: sueldo y suscripciones con cuenta, solo desde la activación y sin repetir', () => {
+  const cfg = { autoDesde: '2026-10-05', sueldo: [{ desde: '2026-01', importe: 1500 }], sueldoCuenta: { id: 'n', dia: 1 },
+    suscripciones: [{ nombre: 'Stream', importe: 12, activa: true, dia: 10, cuenta: 'n' }, { nombre: 'Sin cuenta', importe: 5, activa: true, dia: 10 }, { nombre: 'Anual', importe: 120, cada: 12, desde: '2026-03', dia: 10, cuenta: 'n' }] };
+  const m = C.dueMovements(cfg, '2026-11-15');
+  assert.deepEqual(m.map((x) => x.key), ['c|Stream|2026-10', 's|2026-11', 'c|Stream|2026-11']);          // el sueldo del 1/10 es anterior a la activación
+  assert.equal(m[0].delta, -12); assert.equal(m[1].delta, 1500);
+  assert.deepEqual(C.dueMovements({ ...cfg, aplicados: m.map((x) => x.key) }, '2026-11-15'), []);        // no se repite
+  assert.deepEqual(C.dueMovements({ ...cfg, nominas: ['2026-11'] }, '2026-11-15').map((x) => x.key), ['c|Stream|2026-10', 'c|Stream|2026-11']);   // nómina ya ingresada a mano
+  assert.deepEqual(C.dueMovements({ ...cfg, autoDesde: undefined }, '2026-11-15'), []);
+  assert.deepEqual(C.dueMovements(cfg, '2026-10-08'), []);                                                  // aún no ha llegado el día 10
+});
+
+test('normConfig limpia sueldoCuenta, autoDesde, aplicados y la cuenta de una suscripción', () => {
+  const c = C.normConfig({ sueldoCuenta: { id: 'a b', dia: 99 }, autoDesde: 'mal', aplicados: ['x', 'x', '', 5], suscripciones: [{ nombre: 'S', importe: 3, cuenta: 'ok_1' }, { nombre: 'T', importe: 3, cuenta: '<x>' }] });
+  assert.equal(c.sueldoCuenta, undefined); assert.equal(c.autoDesde, undefined); assert.deepEqual(c.aplicados, ['x', '5']);
+  assert.equal(c.suscripciones[0].cuenta, 'ok_1'); assert.equal(c.suscripciones[1].cuenta, undefined);
+  assert.deepEqual(C.normConfig({ sueldoCuenta: { id: 'n', dia: 99 } }).sueldoCuenta, { id: 'n', dia: 31 });
+});

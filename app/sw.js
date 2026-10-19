@@ -1,5 +1,5 @@
 /* Service worker: la app abre al instante y sin cobertura. Nunca intercepta la hoja de Google ni la API de Gemini. */
-const CACHE = 'finanzas-v23';
+const CACHE = 'finanzas-v24';
 const SHELL = ['./', './index.html', './core.js', './app.js', './boot.js', './pc.js', './more.js', './onboard.js', './cartera.js', './plan.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
@@ -17,7 +17,7 @@ self.addEventListener('fetch', (e) => {
   if (url.pathname.endsWith('/exec') || url.pathname.includes('/gemini/')) return;  // servidor de pruebas local
   // red primero para el HTML/JS (siempre la versión nueva si hay conexión); caché si no la hay
   e.respondWith(
-    fetch(req).then((res) => {
+    fetch(req, { cache: 'no-cache' }).then((res) => {
       if (res.ok) { const copy = res.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); }
       return res;
     }).catch(() => caches.match(req).then((r) => r || caches.match('./index.html')))

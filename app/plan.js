@@ -220,6 +220,22 @@
     if (typeof undo !== 'string') { FF.payLastId = id; payChoice = null; }
     return id ? applyTo(id, C.payDelta(tipo, importe) * (typeof undo === 'string' ? -1 : 1)) : '';
   };
+  /** Aplica los movimientos automáticos vencidos (sueldo y suscripciones con cuenta) una sola vez y avisa. */
+  FF.autoPost = () => {
+    const cfg = data().config, due = C.dueMovements(cfg, C.todayISO()).filter((m) => cuentas().some((c) => c.id === m.cuenta));
+    if (!due.length) return;
+    const saldos = {};
+    cuentas().forEach((c) => { saldos[c.id] = c.saldo; });
+    due.forEach((m) => { saldos[m.cuenta] = C.r2(saldos[m.cuenta] + m.delta); });
+    saveCuentas(cuentas().map((c) => ({ ...c, saldo: saldos[c.id], fecha: due.some((m) => m.cuenta === c.id) ? C.todayISO() : c.fecha })));
+    FF.setConfig('aplicados', (cfg.aplicados || []).concat(due.map((m) => m.key)));
+    const nom = due.filter((m) => m.key.startsWith('s|')).map((m) => m.mes);
+    if (nom.length) FF.setConfig('nominas', [...new Set([...(cfg.nominas || []), ...nom])]);
+    const name = (id) => (cuentas().find((c) => c.id === id) || {}).nombre || '';
+    FF.toast('🤖 Movimientos automáticos: ' + due.slice(0, 4).map((m) => `${m.delta < 0 ? '−' : '+'}${fmt(Math.abs(m.delta))} ${esc(m.concepto)} (${esc(name(m.cuenta))})`).join(' · ') + (due.length > 4 ? ` y ${due.length - 4} más` : ''));
+    FF.payFill();
+    if (FF.renderNow) FF.renderNow();
+  };
   document.addEventListener('change', (e) => { const t = e.target; if (t && (t.id === 'payAcc' || t.id === 'qPay' || t.id === 'nPay' || t.id === 'xPay')) { payChoice = t.value; FF.payFill(); } });
 
   pcMain.addEventListener('click', (e) => {
