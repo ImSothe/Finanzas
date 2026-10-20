@@ -137,11 +137,11 @@ Puedes editar la hoja a mano (las filas sin ID reciben uno solas). El sueldo y l
 
 ## Qué se ha probado y qué NO
 
-Probado automáticamente (`npm test`, 37 pruebas) y en un navegador de escritorio emulando un móvil, contra un servidor local que ejecuta el `Code.gs` real:
+Probado automáticamente (`npm test`, 136 pruebas, incluidas las de seguridad: inyección de fórmulas, copias y configuraciones hostiles, token, CSP) y en un navegador de escritorio emulando un móvil, contra un servidor local que ejecuta el `Code.gs` real:
 alta/edición/borrado, idempotencia de reintentos, cola sin conexión y reenvío, arranque sin red, autocompletado y aprendizaje, ticket dividido y en una fila (suma exacta), búsqueda dentro de tickets, importación del Excel real (sin duplicar al repetir), exportación, errores de Gemini (clave mala, límite, respuesta inválida), escape de HTML, y que el cálculo de *cuánto me queda* coincide con el Excel.
 
 **No probado todavía** (hay que verlo en tu móvil y con tus cuentas):
-- El despliegue real en **Google Apps Script** (permisos, CORS desde otro dominio, redirecciones de `script.google.com`).
+- El uso prolongado en **Google Apps Script** más allá de la hoja del propio autor (se ha desplegado y usado desde un PC y desde la PWA instalada en un móvil, pero todavía no por otras personas).
 - **Gemini real con fotos de tickets reales**: la precisión de la lectura depende de la foto. Solo se comprobó que la petición llega a Google con el formato correcto; el servidor de pruebas simula la respuesta.
 - Instalación en **iPhone/Android** y comportamiento de la cámara en cada navegador.
 - Rendimiento con miles de filas.

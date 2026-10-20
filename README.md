@@ -161,10 +161,10 @@ You manage everything **from the Google Sheet itself**; the app picks changes up
 
 ## What is tested, and what is not
 
-**Tested automatically** (`npm test`, 37 tests): the Apps Script backend run unmodified against an in-memory sheet (auth, idempotent adds, validation, update/delete, dictionary, config) and the pure core (monthly maths, autocomplete, dictionary precedence, receipt normalisation and exact split sums, search inside receipts, Excel import ids). **Also driven end to end in a browser** emulating a phone against a local server running the real `Code.gs`: 3-second entry, learning, both receipt save modes, offline queue replay without duplicates, offline start, Excel import/export, Gemini error handling and the config link.
+**Tested automatically** (`npm test`, 136 tests): the Apps Script backend run unmodified against an in-memory sheet (auth, idempotent adds, validation, update/delete, dictionary, config), the pure core (monthly maths, autocomplete, dictionary precedence, receipt normalisation and exact split sums, search inside receipts, Excel import ids, subscriptions, budgets, savings, portfolio maths) and **security tests** (formula injection in the sheet, hostile backups and configs, token handling, CSP and workflow guards). **Also driven end to end in a browser** emulating a phone against a local server running the real `Code.gs`: 3-second entry, learning, both receipt save modes, offline queue replay without duplicates, offline start, Excel import/export, Gemini error handling and the config link.
 
 **Not verified in the real world yet:**
-- Deployment on a real Google Apps Script (permissions, cross-origin behaviour of `script.google.com`).
+- Long-term use on a real Google Apps Script beyond the author's own sheet (it has been deployed and used from a PC and an installed phone PWA, but not by other people yet).
 - **Gemini on real receipt photos**: reading accuracy depends on the photo. Only the request format was confirmed (Google's API accepted the call and rejected a fake key); the response was simulated.
 - Installation and camera behaviour on real iPhone/Android devices.
 - Performance with many thousands of rows.
