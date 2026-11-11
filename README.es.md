@@ -137,7 +137,7 @@ Puedes editar la hoja a mano (las filas sin ID reciben uno solas). El sueldo y l
 
 ## Qué se ha probado y qué NO
 
-Probado automáticamente (`npm test`, 136 pruebas, incluidas las de seguridad: inyección de fórmulas, copias y configuraciones hostiles, token, CSP) y en un navegador de escritorio emulando un móvil, contra un servidor local que ejecuta el `Code.gs` real:
+Probado automáticamente (`npm test`, 133 pruebas, incluidas las de seguridad: inyección de fórmulas, copias y configuraciones hostiles, token, CSP) y en un navegador de escritorio emulando un móvil, contra un servidor local que ejecuta el `Code.gs` real:
 alta/edición/borrado, idempotencia de reintentos, cola sin conexión y reenvío, arranque sin red, autocompletado y aprendizaje, ticket dividido y en una fila (suma exacta), búsqueda dentro de tickets, importación del Excel real (sin duplicar al repetir), exportación, errores de Gemini (clave mala, límite, respuesta inválida), escape de HTML, y que el cálculo de *cuánto me queda* coincide con el Excel.
 
 **No probado todavía** (hay que verlo en tu móvil y con tus cuentas):
@@ -155,4 +155,4 @@ npm run dev              # http://127.0.0.1:8777 con hoja y Gemini simulados (to
 `app/core.js` no toca el DOM: toda la lógica de negocio (cálculo del mes, diccionario, tickets, búsqueda) está ahí y es la que prueban los tests.
 
 ## Licencia
-MIT ([LICENSE](LICENSE)). Incluye [SheetJS](https://sheetjs.com) (Apache-2.0) en `app/vendor/`.
+[PolyForm Noncommercial 1.0.0](LICENSE): puedes usarla, estudiarla y modificarla gratis para cualquier fin no comercial; el uso comercial queda reservado al autor. Las versiones publicadas antes de este cambio salieron con licencia MIT, que sigue valiendo para esas versiones. Incluye [SheetJS](https://sheetjs.com) (Apache-2.0) en `app/vendor/`.

@@ -161,7 +161,7 @@ You manage everything **from the Google Sheet itself**; the app picks changes up
 
 ## What is tested, and what is not
 
-**Tested automatically** (`npm test`, 132 tests): the Apps Script backend run unmodified against an in-memory sheet (auth, idempotent adds, validation, update/delete, dictionary, config), the pure core (monthly maths, autocomplete, dictionary precedence, receipt normalisation and exact split sums, search inside receipts, Excel import ids, subscriptions, budgets, savings, portfolio maths) and **security tests** (formula injection in the sheet, hostile backups and configs, token handling, CSP and workflow guards). **Also driven end to end in a browser** emulating a phone against a local server running the real `Code.gs`: 3-second entry, learning, both receipt save modes, offline queue replay without duplicates, offline start, Excel import/export, Gemini error handling and the config link.
+**Tested automatically** (`npm test`, 133 tests): the Apps Script backend run unmodified against an in-memory sheet (auth, idempotent adds, validation, update/delete, dictionary, config), the pure core (monthly maths, autocomplete, dictionary precedence, receipt normalisation and exact split sums, search inside receipts, Excel import ids, subscriptions, budgets, savings, portfolio maths) and **security tests** (formula injection in the sheet, hostile backups and configs, token handling, CSP and workflow guards). **Also driven end to end in a browser** emulating a phone against a local server running the real `Code.gs`: 3-second entry, learning, both receipt save modes, offline queue replay without duplicates, offline start, Excel import/export, Gemini error handling and the config link.
 
 **Not verified in the real world yet:**
 - Long-term use on a real Google Apps Script beyond the author's own sheet (it has been deployed and used from a PC and an installed phone PWA, but not by other people yet).
@@ -179,4 +179,4 @@ npm run dev     # http://127.0.0.1:8777 with a simulated sheet and a simulated G
 
 ## Credits & licence
 
-MIT, see [LICENSE](LICENSE). Bundles [SheetJS](https://sheetjs.com) (Apache-2.0) in `app/vendor/`. Receipt reading uses Google's Gemini API under your own key and Google's terms. Spanish guide: [README.es.md](README.es.md).
+[PolyForm Noncommercial 1.0.0](LICENSE): free to use, study and modify for any noncommercial purpose; commercial use is reserved to the author. Versions published before this change were released under the MIT licence, which still applies to those versions. Bundles [SheetJS](https://sheetjs.com) (Apache-2.0) in `app/vendor/`. Receipt reading uses Google's Gemini API under your own key and Google's terms. Spanish guide: [README.es.md](README.es.md).
