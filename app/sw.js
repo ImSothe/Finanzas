@@ -1,13 +1,14 @@
 /* Service worker: la app abre al instante y sin cobertura. Nunca intercepta la hoja de Google ni la API de Gemini. */
-const CACHE = 'finanzas-v36';
+const CACHE = 'finanzas-v37';
 const SHELL = ['./', './index.html', './core.js', './app.js', './boot.js', './pc.js', './more.js', './onboard.js', './cartera.js', './plan.js', './manifest.webmanifest', './icons/icon-192.png', './icons/icon-512.png', './icons/apple-touch-icon.png'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(caches.open(CACHE).then((c) => c.addAll(SHELL)).then(() => self.skipWaiting()));
 });
 
+/* GitHub Pages sirve todas las apps de la cuenta desde el mismo origen: la caché es compartida, así que solo se borran las propias ("finanzas-…"). */
 self.addEventListener('activate', (e) => {
-  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
+  e.waitUntil(caches.keys().then((ks) => Promise.all(ks.filter((k) => k.startsWith('finanzas-') && k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim()));
 });
 
 self.addEventListener('fetch', (e) => {

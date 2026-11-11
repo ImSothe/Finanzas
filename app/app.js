@@ -3,7 +3,7 @@
   'use strict';
   const C = window.Core;
   const FF = (window.FF = { pcActive: false });      // enganche para la vista de escritorio (pc.js)
-  const VERSION = '1.0.0', BUILD = 36;                                       // BUILD sube con cada publicación (se ve abajo en Ajustes)
+  const VERSION = '1.0.0', BUILD = 37;                                       // BUILD sube con cada publicación (se ve abajo en Ajustes)
   const $ = (s, r = document) => r.querySelector(s);
   const $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));

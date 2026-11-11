@@ -49,6 +49,12 @@ test('todos los scripts de index.html existen y están en la caché del service 
   for (const s of scripts) { assert.ok(fs.existsSync(path.join(ROOT, 'app', s)), s); assert.ok(sw.includes(`'./${s}'`), 'falta en sw.js: ' + s); }
 });
 
+test('service worker: solo borra sus propias cachés (el origen de GitHub Pages se comparte con otras apps)', () => {
+  const sw = read('app/sw.js');
+  assert.equal((sw.match(/caches\.delete\(/g) || []).length, 1);
+  assert.ok(/k\.startsWith\('finanzas-'\) && k !== CACHE/.test(sw), 'la limpieza de cachés debe limitarse al prefijo finanzas-');
+});
+
 test('el código de la app no usa eval, new Function, document.write, insertAdjacentHTML ni outerHTML', () => {
   for (const f of appJs) {
     const src = read('app/' + f).replace(/\/\*[\s\S]*?\*\//g, '').replace(/^\s*\/\/.*$/gm, '');
